@@ -236,6 +236,10 @@ function validateNameClient(value) {
 const LOCK_ICON =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 
+const THEME_ICONS =
+  '<svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>' +
+  '<svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+
 let accountUiBuilt = false;
 function ensureAccountUI() {
   if (accountUiBuilt) return;
@@ -286,6 +290,15 @@ function ensureAccountUI() {
       <div class="lg-info">
         <div class="lg-info-row"><span>Konstruktor</span><strong id="profileConstructor">—</strong></div>
       </div>
+      <div class="lg-theme-row">
+        <div class="lg-theme-text">
+          <strong id="themeSwitchLabel">Dark theme</strong>
+          <small>Qorong'i ko'rinish — barcha sahifalarda</small>
+        </div>
+        <button class="lg-switch" id="themeSwitch" type="button" role="switch" aria-checked="false" aria-labelledby="themeSwitchLabel">
+          <span class="lg-switch-knob">${THEME_ICONS}</span>
+        </button>
+      </div>
       <div class="lg-logout" id="profileLogoutArea"></div>
     </div>
   </div>`;
@@ -305,9 +318,25 @@ function ensureAccountUI() {
   });
   el("profileForm").addEventListener("submit", onProfileSubmit);
   renderLogoutArea(false);
+
+  /* Dark theme: tugma turgan joydan doira shaklida ochiladi (js/theme.js). */
+  el("themeSwitch").addEventListener("click", () => {
+    if (!window.LGTheme) return;
+    const r = el("themeSwitch").getBoundingClientRect();
+    window.LGTheme.toggle({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+  });
+  document.addEventListener("lg:theme", syncThemeSwitch);
+  syncThemeSwitch();
+
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && el("profileModal").classList.contains("open")) closeProfile();
   });
+}
+
+function syncThemeSwitch() {
+  const sw = document.getElementById("themeSwitch");
+  if (!sw || !window.LGTheme) return;
+  sw.setAttribute("aria-checked", window.LGTheme.get() === "dark" ? "true" : "false");
 }
 
 function overlayOpen(id) {

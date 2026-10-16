@@ -1,0 +1,408 @@
+/* Laminated Glasses — dark theme.
+   Bu fayl style.css va dialogs.css'dan KEYIN ulanadi.
+
+   Yondashuv: saytdagi deyarli barcha ranglar CSS o'zgaruvchilari (--white,
+   --ice, --navy ...) orqali berilgan, shuning uchun dark theme'da shu
+   o'zgaruvchilarning qiymatlari almashtiriladi. Keyin esa o'zgaruvchisiz
+   (qattiq kodlangan) ranglar bor joylar alohida to'g'rilanadi. */
+
+/* ================================================================
+   1. Mavzu almashtirgich (profil oynasidagi switch) — ikkala mavzuda
+   ================================================================ */
+.lg-theme-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 6px;
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--line);
+}
+
+.lg-theme-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lg-theme-text strong {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.lg-theme-text small {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--navy-soft);
+}
+
+.lg-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 58px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--ice-2);
+  cursor: pointer;
+  transition: background-color 0.35s var(--ease), border-color 0.35s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lg-switch:focus-visible {
+  outline: 2px solid var(--sky);
+  outline-offset: 3px;
+}
+
+.lg-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(6, 38, 61, 0.28);
+  transition: transform 0.45s var(--ease), background-color 0.35s var(--ease);
+}
+
+.lg-switch-knob svg {
+  position: absolute;
+  inset: 4px;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 0.3s var(--ease), transform 0.5s var(--ease);
+}
+
+.lg-switch-knob .icon-sun { color: #d98a1f; opacity: 1; transform: rotate(0) scale(1); }
+.lg-switch-knob .icon-moon { color: #cfe6f6; opacity: 0; transform: rotate(-70deg) scale(0.4); }
+
+.lg-switch[aria-checked="true"] {
+  background: var(--sky);
+  border-color: var(--sky);
+}
+
+.lg-switch[aria-checked="true"] .lg-switch-knob {
+  transform: translateX(26px);
+  background: #0a1620;
+}
+
+.lg-switch[aria-checked="true"] .icon-sun { opacity: 0; transform: rotate(70deg) scale(0.4); }
+.lg-switch[aria-checked="true"] .icon-moon { opacity: 1; transform: rotate(0) scale(1); }
+
+/* ================================================================
+   2. Mavzu almashish animatsiyasi
+   ================================================================ */
+
+/* View Transitions (Chrome, Edge, Safari, yangi Firefox): yangi mavzu
+   tugma turgan joydan doira shaklida ochiladi (theme.js clip-path'ni
+   animatsiya qiladi). Sahifalar orasidagi o'tish animatsiyasi bu paytda
+   o'chiriladi, aks holda ikkalasi to'qnashadi. */
+html.theme-vt::view-transition-old(root),
+html.theme-vt::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html.theme-vt::view-transition-old(root) { z-index: 1; }
+html.theme-vt::view-transition-new(root) { z-index: 2; }
+
+/* Sarlavha odatda alohida "qatlam" (sahifalar orasidagi o'tish uchun).
+   Mavzu almashayotganda u ham umumiy doira ichida ochilishi kerak. */
+html.theme-vt .site-header {
+  view-transition-name: none;
+}
+
+/* Doira ichida yangi mavzu darhol to'liq ko'rinishi kerak. Elementlarning
+   o'z rang o'tishlari (hover va h.k.) bu paytda ishlasa, doira ichida
+   oraliq ranglar "miltillab" ko'rinadi. Faqat switch'ning o'zi silliq
+   harakatlanadi (bosilganini his qilish uchun). */
+html.theme-vt *:not(.lg-switch):not(.lg-switch *),
+html.theme-vt *:not(.lg-switch):not(.lg-switch *)::before,
+html.theme-vt *:not(.lg-switch):not(.lg-switch *)::after {
+  transition: none !important;
+}
+
+/* Zaxira (View Transitions yo'q brauzerlar): ranglar silliq o'tadi. */
+html.theme-fade *,
+html.theme-fade *::before,
+html.theme-fade *::after {
+  transition: background-color 0.45s ease, color 0.45s ease, border-color 0.45s ease,
+    fill 0.45s ease, stroke 0.45s ease, box-shadow 0.45s ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-switch,
+  .lg-switch-knob,
+  .lg-switch-knob svg {
+    transition: none;
+  }
+}
+
+/* ================================================================
+   3. DARK THEME
+   ================================================================ */
+html[data-theme="dark"] {
+  color-scheme: dark; /* brauzer scrollbar, input, tanlash ranglari ham qorong'i */
+
+  --white: #112130;       /* kartalar, panellar (oq o'rniga) */
+  --ice: #0b1722;         /* sahifa fonlari, input fonlari */
+  --ice-2: #1a3045;       /* ikkilamchi fon, chiplar */
+  --sky: #4aa8e8;
+  --sky-deep: #7ec3f0;
+  --sky-soft: #8cc4e8;
+  --navy: #e8f1f8;        /* asosiy matn */
+  --navy-soft: #9fb8cb;   /* ikkilamchi matn */
+  --amber: #e8a24a;
+  --amber-soft: #3a2c12;
+  --line: rgba(170, 205, 235, 0.13);
+  --line-strong: rgba(170, 205, 235, 0.26);
+  --glass-bg: rgba(17, 33, 48, 0.78);
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-lift: 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme="dark"] body {
+  background: var(--ice);
+  color: var(--navy);
+}
+
+html[data-theme="dark"] ::selection {
+  background: rgba(74, 168, 232, 0.35);
+  color: #fff;
+}
+
+/* ---------- Tugmalar ---------- */
+html[data-theme="dark"] .btn-primary {
+  background: var(--sky);
+  color: #04131f;
+}
+html[data-theme="dark"] .btn-primary:hover:not(:disabled) {
+  background: var(--sky-deep);
+  color: #04131f;
+}
+html[data-theme="dark"] .btn-accent { color: #1d1204; }
+html[data-theme="dark"] .hero .btn-primary,
+html[data-theme="dark"] .hero .btn:hover { box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4); }
+
+/* ---------- Sarlavha, menyu, overlaylar ---------- */
+html[data-theme="dark"] .site-header {
+  background: rgba(10, 22, 32, 0.9);
+}
+html[data-theme="dark"] .mobile-nav-overlay { background: rgba(0, 6, 12, 0.6); }
+html[data-theme="dark"] .drawer-overlay,
+html[data-theme="dark"] .modal-overlay,
+html[data-theme="dark"] .lg-overlay,
+html[data-theme="dark"] .lgd-overlay { background: rgba(0, 6, 12, 0.7); }
+html[data-theme="dark"] .drawer { box-shadow: -20px 0 50px rgba(0, 0, 0, 0.5); }
+html[data-theme="dark"] .modal-close { background: rgba(17, 33, 48, 0.92); color: var(--navy); }
+html[data-theme="dark"] .gate-card { box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6); }
+
+/* ---------- Bosh sahifa: hero ---------- */
+html[data-theme="dark"] .hero,
+html[data-theme="dark"] body:has(.hero) .hero {
+  background:
+    radial-gradient(ellipse at 80% 30%, rgba(46, 134, 200, 0.24), transparent 42%),
+    linear-gradient(125deg, #0a1620 0%, #0c1b28 55%, #0f2232 100%);
+}
+html[data-theme="dark"] .hero:after { background-image:
+    linear-gradient(rgba(140, 196, 232, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(140, 196, 232, 0.06) 1px, transparent 1px); }
+html[data-theme="dark"] body:has(.hero) .hero:after { background: rgba(46, 134, 200, 0.16); }
+html[data-theme="dark"] .hero:before,
+html[data-theme="dark"] body:has(.hero) .hero:before { border-color: rgba(126, 195, 240, 0.16); }
+html[data-theme="dark"] .hero-eyebrow {
+  background: rgba(17, 33, 48, 0.75);
+  border-color: var(--line-strong);
+  color: var(--sky-deep);
+  box-shadow: none;
+}
+html[data-theme="dark"] .eyebrow-dot { background: var(--sky); box-shadow: 0 0 0 5px rgba(74, 168, 232, 0.2); }
+html[data-theme="dark"] .hero h1 em,
+html[data-theme="dark"] body:has(.hero) .hero h1 em { color: var(--sky); text-shadow: 0 8px 30px rgba(74, 168, 232, 0.2); }
+html[data-theme="dark"] .hero p { color: var(--navy-soft); }
+html[data-theme="dark"] .hero-stats div,
+html[data-theme="dark"] body:has(.hero) .hero-stats div { border-left-color: var(--line-strong); }
+html[data-theme="dark"] body:has(.hero) .hero-stats { border-top-color: var(--line); }
+html[data-theme="dark"] .hero-stats strong,
+html[data-theme="dark"] body:has(.hero) .hero-stats strong { color: var(--sky-deep); }
+html[data-theme="dark"] body:has(.hero) .hero-stats span { color: var(--navy-soft); }
+html[data-theme="dark"] .showcase-orbit { border-color: rgba(126, 195, 240, 0.16); }
+html[data-theme="dark"] .showcase-caption { color: var(--navy-soft); }
+html[data-theme="dark"] .caption-line { background: var(--sky); }
+
+/* Hero'dagi shisha ko'rinishi (dekorativ) */
+html[data-theme="dark"] .pane-back,
+html[data-theme="dark"] body:has(.hero) .pane-back {
+  background: linear-gradient(145deg, rgba(26, 48, 69, 0.85), rgba(17, 33, 48, 0.5)) !important;
+  border-color: rgba(126, 195, 240, 0.22);
+}
+html[data-theme="dark"] .pane-front,
+html[data-theme="dark"] body:has(.hero) .pane-front {
+  background: linear-gradient(145deg, rgba(74, 168, 232, 0.34), rgba(18, 85, 127, 0.45)) !important;
+  border-color: rgba(126, 195, 240, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 28px 65px rgba(0, 0, 0, 0.5) !important;
+}
+html[data-theme="dark"] .glass-badge {
+  background: rgba(17, 33, 48, 0.92);
+  border-color: var(--line-strong);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.45);
+  color: var(--navy);
+}
+html[data-theme="dark"] .badge-check { background: rgba(74, 168, 232, 0.2); color: var(--sky-deep); }
+
+/* ---------- Bosh sahifa: bo'limlar ---------- */
+html[data-theme="dark"] .about,
+html[data-theme="dark"] .contact-modern {
+  background: linear-gradient(135deg, #0b1722, #0e1d2b);
+}
+html[data-theme="dark"] .about-grid {
+  background: linear-gradient(135deg, rgba(17, 33, 48, 0.96), rgba(14, 29, 43, 0.92));
+  border-color: var(--line);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .about-stat {
+  background: var(--white);
+  border-color: var(--line);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+html[data-theme="dark"] .about:after { border-color: rgba(126, 195, 240, 0.14); }
+html[data-theme="dark"] .about-text { color: var(--navy-soft); }
+html[data-theme="dark"] .about-stat span { color: var(--navy-soft); }
+
+/* Qorong'i "qadamlar" bo'limi: dark theme'da ham qorong'i qoladi, lekin
+   sahifa fonidan ajralib turishi uchun biroz chuqurroq va ko'kroq. */
+html[data-theme="dark"] .steps { background: #071119; color: #e8f1f8; }
+html[data-theme="dark"] .steps .section-head h2 { color: #e8f1f8; }
+html[data-theme="dark"] .step { background: #0d1c29; color: #e8f1f8; }
+html[data-theme="dark"] .step h3 { color: #e8f1f8; }
+html[data-theme="dark"] .step-grid { background: rgba(126, 195, 240, 0.12); border-color: rgba(126, 195, 240, 0.12); }
+
+html[data-theme="dark"] .service-icon { background: var(--ice-2); color: var(--sky-deep); }
+
+/* ---------- Karta va panellardagi soyalar ---------- */
+html[data-theme="dark"] .service-card:hover,
+html[data-theme="dark"] .step:hover,
+html[data-theme="dark"] .contact-card:hover,
+html[data-theme="dark"] .product-card:hover,
+html[data-theme="dark"] .news-card:hover { box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45); }
+html[data-theme="dark"] .skeleton {
+  background: linear-gradient(100deg, var(--ice) 30%, var(--ice-2) 50%, var(--ice) 70%);
+  background-size: 200% 100%;
+}
+
+/* ---------- Aloqa sahifasi ---------- */
+html[data-theme="dark"] .contact-method {
+  background: rgba(17, 33, 48, 0.9);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+html[data-theme="dark"] .social-panel { background: var(--white); }
+html[data-theme="dark"] .instagram { color: #ee6fa8; }
+html[data-theme="dark"] .telegram { color: #4db8ee; }
+html[data-theme="dark"] .youtube { color: #ff6a6a; }
+html[data-theme="dark"] .gmail { color: #ef7d70; }
+html[data-theme="dark"] .contact-visual {
+  background: linear-gradient(145deg, #071119, #0f3a58 60%, #1b6aa0);
+  box-shadow: 0 24px 55px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- Mahsulot galereyasi (rasmlar ostidagi fon) ---------- */
+html[data-theme="dark"] .product-gallery,
+html[data-theme="dark"] .detail-gallery { background: #0e1b27; }
+html[data-theme="dark"] .detail-thumbs { background: var(--white); }
+html[data-theme="dark"] .detail-thumb { background: var(--ice-2); }
+html[data-theme="dark"] .detail-thumb.active { border-color: var(--sky); }
+html[data-theme="dark"] .product-media:hover { box-shadow: inset 0 0 0 2px rgba(74, 168, 232, 0.4); }
+
+/* ---------- Yurakcha (like) ---------- */
+html[data-theme="dark"] .like-btn:hover { border-color: #ff7a8c; color: #ff7a8c; }
+html[data-theme="dark"] .like-btn.liked {
+  color: #ff6b80;
+  border-color: rgba(255, 107, 128, 0.5);
+  background: rgba(255, 107, 128, 0.12);
+}
+html[data-theme="dark"] .like-btn.liked svg { fill: #ff6b80; }
+html[data-theme="dark"] .like-card {
+  background: rgba(17, 33, 48, 0.92);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .like-card.liked { background: rgba(70, 28, 38, 0.95); }
+
+/* ---------- Izohlar ---------- */
+html[data-theme="dark"] .cm-item.admin .cm-avatar { box-shadow: 0 0 0 2px var(--white), 0 0 0 4px #1d9bf0; }
+/* Avatar rangli doira ustida bo'ladi (rang JS'dan beriladi) — harf doim oq. */
+html[data-theme="dark"] .cm-avatar { color: #fff; }
+html[data-theme="dark"] .cm-admin { background: rgba(29, 155, 240, 0.18); color: #6cbcf5; }
+html[data-theme="dark"] .cm-actions button:hover { background: rgba(74, 168, 232, 0.16); }
+html[data-theme="dark"] .cm-actions button.danger { color: #ff8f8a; }
+html[data-theme="dark"] .cm-actions button.danger:hover { background: rgba(255, 143, 138, 0.14); }
+html[data-theme="dark"] .cm-error { color: #ff9a94; }
+
+/* ---------- Savat, xabarlar, akkaunt oynalari ---------- */
+html[data-theme="dark"] .toast {
+  background: #1d3347;
+  color: #e8f1f8;
+  border: 1px solid var(--line-strong);
+}
+html[data-theme="dark"] .toast.error { background: #7a2723; border-color: rgba(255, 143, 138, 0.35); }
+html[data-theme="dark"] .drawer-notice { color: #f0c987; }
+html[data-theme="dark"] .link-danger { color: #ff8f8a; }
+html[data-theme="dark"] .gate-error,
+html[data-theme="dark"] .lg-error { color: #ff9a94; }
+html[data-theme="dark"] .lg-field input:focus { box-shadow: 0 0 0 3px rgba(74, 168, 232, 0.28); }
+html[data-theme="dark"] .lg-btn-danger { color: #fff; }
+
+/* ---------- Konstruktor ---------- */
+html[data-theme="dark"] .constructor-limit.is-blocked { border-color: rgba(232, 162, 74, 0.5); }
+html[data-theme="dark"] .constructor-limit.is-ok {
+  background: rgba(46, 143, 92, 0.16);
+  border-color: rgba(86, 196, 134, 0.35);
+}
+html[data-theme="dark"] .constructor-error { color: #ff9a94; }
+html[data-theme="dark"] .size-card.active .size-card-panes { background: rgba(6, 38, 61, 0.14); color: var(--white); }
+html[data-theme="dark"] .constructor-zoom-btn {
+  background: rgba(17, 33, 48, 0.92);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .constructor-zoom-btn:hover { background: var(--ice-2); }
+html[data-theme="dark"] .constructor-pane {
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5), 0 4px 9px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+/* ---------- Dialog oynalar (dialogs.css) ---------- */
+html[data-theme="dark"] .lgd-input:focus { background: var(--white); }
+html[data-theme="dark"] .lgd-error { color: #ff9a94; }
+html[data-theme="dark"] .lgd-btn-main {
+  background: var(--sky);
+  color: #04131f;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .lgd-btn-main:hover { background: var(--sky-deep); }
+html[data-theme="dark"] .lgd-danger .lgd-icon { background: rgba(255, 107, 96, 0.16); color: #ff8f8a; }
+html[data-theme="dark"] .lgd-warning .lgd-icon { color: #f0b765; }
+html[data-theme="dark"] .lgd-success .lgd-icon { background: rgba(46, 143, 92, 0.2); color: #5fd196; }
+html[data-theme="dark"] .lgd-danger .lgd-btn-main { background: #c0392b; color: #fff; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
+html[data-theme="dark"] .lgd-danger .lgd-btn-main:hover { background: #d4493b; }
+
+/* ---------- Forma elementlari ---------- */
+/* Fon berilmagan maydonlar (masalan qidiruv) brauzer standartida kulrang
+   bo'lib qoladi. :where() ixtisoslikni nolga tushiradi, shuning uchun
+   o'z foni bor maydonlar (.lg-field input va h.k.) o'zgarmaydi. */
+:where(html[data-theme="dark"]) :where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  textarea,
+  select
+) {
+  background-color: var(--white);
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder { color: rgba(159, 184, 203, 0.65); }
