@@ -211,7 +211,12 @@ def _like_count(db: Session, product_id: int) -> int:
     )
 
 
-def _comment_out(c: models.ProductComment, author: models.Customer, me: Optional[models.Customer]) -> schemas.CommentOut:
+def _comment_out(
+    c: models.ProductComment,
+    author: models.Customer,
+    me: Optional[models.Customer],
+    reply_to: Optional[str] = None,
+) -> schemas.CommentOut:
     """Ommaviy izoh: ism, (Google) profil rasmi, admin belgisi va matn.
     Email va mijoz ID'si CHIQMAYDI."""
     is_mine = me is not None and c.customer_id == me.id
@@ -225,7 +230,10 @@ def _comment_out(c: models.ProductComment, author: models.Customer, me: Optional
         is_mine=is_mine,
         avatar=utils.safe_avatar_url(author.picture_url),
         is_admin=bool(author.is_staff),
-        edits_left=max(0, config.COMMENT_MAX_EDITS - used) if is_mine else 0,
+        # Admin uchun tahrir limiti yo'q (999 = "cheksiz" belgisi).
+        edits_left=(999 if author.is_staff else max(0, config.COMMENT_MAX_EDITS - used)) if is_mine else 0,
+        parent_id=c.parent_id,
+        reply_to=reply_to if c.parent_id is not None else None,
     )
 
 
@@ -271,14 +279,39 @@ def product_social(
     """Mahsulot oynasi ochilganda: like soni, shu mijoz like bosganmi va
     barcha (eng yangi COMMENT_LIST_LIMIT ta) izohlar."""
     _active_product_or_404(db, product_id)
-    rows = (
+    # Asosiy izohlar (eng yangi COMMENT_LIST_LIMIT ta) va ularga yozilgan javoblar.
+    roots = (
         db.query(models.ProductComment, models.Customer)
         .join(models.Customer, models.Customer.id == models.ProductComment.customer_id)
-        .filter(models.ProductComment.product_id == product_id)
+        .filter(
+            models.ProductComment.product_id == product_id,
+            models.ProductComment.parent_id.is_(None),
+        )
         .order_by(models.ProductComment.created_at.desc(), models.ProductComment.id.desc())
         .limit(config.COMMENT_LIST_LIMIT)
         .all()
     )
+    root_ids = [c.id for c, _ in roots]
+    reply_rows = []
+    if root_ids:
+        reply_rows = (
+            db.query(models.ProductComment, models.Customer)
+            .join(models.Customer, models.Customer.id == models.ProductComment.customer_id)
+            .filter(models.ProductComment.parent_id.in_(root_ids))
+            .order_by(models.ProductComment.created_at.asc(), models.ProductComment.id.asc())
+            .all()
+        )
+    root_name = {c.id: author.name for c, author in roots}
+    replies_by_root = {}
+    for c, author in reply_rows:
+        replies_by_root.setdefault(c.parent_id, []).append(
+            _comment_out(c, author, customer, reply_to=root_name.get(c.parent_id))
+        )
+    comments_out = []
+    for c, author in roots:
+        item = _comment_out(c, author, customer)
+        item.replies = replies_by_root.get(c.id, [])
+        comments_out.append(item)
     total = (
         db.query(func.count(models.ProductComment.id))
         .join(models.Customer, models.Customer.id == models.ProductComment.customer_id)
@@ -311,11 +344,16 @@ def product_social(
         like_count=_like_count(db, product_id),
         liked=liked,
         comment_count=int(total),
-        comments=[_comment_out(c, author, customer) for c, author in rows],
+        comments=comments_out,
         my_comment_count=int(mine),
         comment_limit=config.COMMENT_MAX_PER_USER_PER_PRODUCT,
-        comment_max_length=config.COMMENT_MAX_LENGTH,
+        comment_max_length=(
+            config.COMMENT_STAFF_MAX_LENGTH
+            if customer is not None and customer.is_staff
+            else config.COMMENT_MAX_LENGTH
+        ),
         comment_max_edits=config.COMMENT_MAX_EDITS,
+        can_moderate=bool(customer is not None and customer.is_staff),
     )
 
 
@@ -373,13 +411,43 @@ def add_comment(
 ):
     """Izoh yozadi. Bitta akkaunt bitta mahsulotga COMMENT_MAX_PER_USER_PER_PRODUCT
     (5) tagacha izoh yoza oladi; matn COMMENT_MAX_LENGTH (100) belgigacha."""
-    security.enforce_rate_limit(request, "product_comment", max_calls=20, window_seconds=600)
+    is_staff = bool(customer.is_staff)
+    if payload.reply_to_id is not None and not is_staff:
+        raise HTTPException(status_code=403, detail="Izohga javob yozish faqat adminlar uchun.")
+    if not is_staff:
+        security.enforce_rate_limit(request, "product_comment", max_calls=20, window_seconds=600)
     _active_product_or_404(db, product_id)
     _reject_unsafe_comment(request, db, payload.body)
     try:
-        body = utils.clean_comment_text(payload.body)
+        body = utils.clean_comment_text(
+            payload.body, max_length=config.COMMENT_STAFF_MAX_LENGTH if is_staff else None
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+    # Javob: faqat shu mahsulotdagi izohga; javobga javob esa asosiy izohga bog'lanadi.
+    parent = None
+    reply_to_name = None
+    if payload.reply_to_id is not None:
+        target = (
+            db.query(models.ProductComment)
+            .filter(
+                models.ProductComment.id == payload.reply_to_id,
+                models.ProductComment.product_id == product_id,
+            )
+            .first()
+        )
+        if target is not None and target.parent_id is not None:
+            target = (
+                db.query(models.ProductComment)
+                .filter(models.ProductComment.id == target.parent_id)
+                .first()
+            )
+        if target is None:
+            raise HTTPException(status_code=404, detail="Javob beriladigan izoh topilmadi (o'chirilgan bo'lishi mumkin).")
+        parent = target
+        owner = db.query(models.Customer).filter(models.Customer.id == parent.customer_id).first()
+        reply_to_name = owner.name if owner is not None else None
 
     # Tekshiruv + yozish bir butun: ikki parallel so'rov limitdan oshib ketmasin.
     with _comment_lock:
@@ -392,7 +460,7 @@ def add_comment(
             .scalar()
             or 0
         )
-        if mine >= config.COMMENT_MAX_PER_USER_PER_PRODUCT:
+        if not is_staff and mine >= config.COMMENT_MAX_PER_USER_PER_PRODUCT:
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -401,12 +469,15 @@ def add_comment(
                 ),
             )
         comment = models.ProductComment(
-            product_id=product_id, customer_id=customer.id, body=body
+            product_id=product_id,
+            customer_id=customer.id,
+            body=body,
+            parent_id=parent.id if parent is not None else None,
         )
         db.add(comment)
         db.commit()
         db.refresh(comment)
-    return _comment_out(comment, customer, customer)
+    return _comment_out(comment, customer, customer, reply_to=reply_to_name)
 
 
 def _own_comment_or_404(db: Session, comment_id: int, customer: models.Customer) -> models.ProductComment:
@@ -435,10 +506,14 @@ def edit_comment(
     """Faqat o'z izohini tahrirlaydi. Har bir izohni eng ko'pi bilan
     COMMENT_MAX_EDITS (3) marta tahrirlash mumkin; matn o'zgarmasa urinish
     hisobga olinmaydi."""
-    security.enforce_rate_limit(request, "product_comment", max_calls=20, window_seconds=600)
+    is_staff = bool(customer.is_staff)
+    if not is_staff:
+        security.enforce_rate_limit(request, "product_comment", max_calls=20, window_seconds=600)
     _reject_unsafe_comment(request, db, payload.body)
     try:
-        new_body = utils.clean_comment_text(payload.body)
+        new_body = utils.clean_comment_text(
+            payload.body, max_length=config.COMMENT_STAFF_MAX_LENGTH if is_staff else None
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -447,7 +522,7 @@ def edit_comment(
         comment = _own_comment_or_404(db, comment_id, customer)
         if new_body != comment.body:
             used = int(comment.edit_count or 0)
-            if used >= config.COMMENT_MAX_EDITS:
+            if not is_staff and used >= config.COMMENT_MAX_EDITS:
                 raise HTTPException(
                     status_code=409,
                     detail=(
@@ -469,8 +544,22 @@ def delete_comment(
     db: Session = Depends(get_db),
     customer: models.Customer = Depends(security.get_current_customer),
 ):
-    """Faqat o'z izohini o'chiradi."""
-    comment = _own_comment_or_404(db, comment_id, customer)
+    """Oddiy foydalanuvchi faqat o'z izohini o'chiradi. Admin (is_staff) esa
+    HAR QANDAY izohni o'chira oladi. O'chirish bazadan butunlay bo'ladi va
+    shu izohga yozilgan javoblar ham o'chadi (yetim javob qolmasin)."""
+    if customer.is_staff:
+        comment = (
+            db.query(models.ProductComment)
+            .filter(models.ProductComment.id == comment_id)
+            .first()
+        )
+        if comment is None:
+            raise HTTPException(status_code=404, detail="Izoh topilmadi.")
+    else:
+        comment = _own_comment_or_404(db, comment_id, customer)
+    db.query(models.ProductComment).filter(
+        models.ProductComment.parent_id == comment.id
+    ).delete(synchronize_session=False)
     db.delete(comment)
     db.commit()
     return None
@@ -906,6 +995,12 @@ def _active_constructor_usage(db: Session, customer_id: int) -> Optional[models.
     )
 
 
+def _unlimited_out() -> schemas.ConstructorLimitOut:
+    return schemas.ConstructorLimitOut(
+        allowed=True, limit_hours=config.CONSTRUCTOR_LIMIT_HOURS, unlimited=True
+    )
+
+
 def _limit_out(usage: Optional[models.ConstructorUsage]) -> schemas.ConstructorLimitOut:
     if usage is None:
         return schemas.ConstructorLimitOut(allowed=True, limit_hours=config.CONSTRUCTOR_LIMIT_HOURS)
@@ -922,7 +1017,10 @@ def constructor_limit(
     db: Session = Depends(get_db),
     customer: models.Customer = Depends(security.get_current_customer),
 ):
-    """Akkaunt konstruktordan hozir foydalana oladimi (yoki qancha kutish kerak)."""
+    """Akkaunt konstruktordan hozir foydalana oladimi (yoki qancha kutish kerak).
+    Admin (is_staff) uchun limit yo'q."""
+    if customer.is_staff:
+        return _unlimited_out()
     return _limit_out(_active_constructor_usage(db, customer.id))
 
 
@@ -936,6 +1034,9 @@ def constructor_start(
 
     `allowed=True` -- foydalanish yozildi (keyingisi limit_hours dan so'ng).
     `allowed=False` -- limit sarflangan, `retry_after_seconds` ichida kutish kerak."""
+    if customer.is_staff:
+        # Admin: limit sarflanmaydi va yozuv ham qoldirilmaydi.
+        return _unlimited_out()
     security.enforce_rate_limit(request, "constructor_start", max_calls=30, window_seconds=600)
     with _constructor_lock:
         active = _active_constructor_usage(db, customer.id)
@@ -965,7 +1066,7 @@ async def share_constructor_preview(
     yerda bot orqali avtomatik xabar yuborilmaydi."""
     security.enforce_rate_limit(request, "constructor_share", max_calls=15, window_seconds=600)
     # Faqat konstruktordan foydalanishni (limitni) boshlagan akkaunt yubora oladi.
-    if _active_constructor_usage(db, customer.id) is None:
+    if not customer.is_staff and _active_constructor_usage(db, customer.id) is None:
         raise HTTPException(
             status_code=403,
             detail="Avval konstruktorda rasm yuklab, dizaynni boshlang.",

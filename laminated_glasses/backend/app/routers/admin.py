@@ -425,6 +425,8 @@ def delete_comment_admin(
     )
     if comment is None:
         raise HTTPException(status_code=404, detail="Izoh topilmadi (allaqachon o'chirilgan bo'lishi mumkin).")
+    # Asosiy izoh o'chsa, unga yozilgan admin javoblari ham o'chadi (yetim javob qolmasin).
+    db.query(models.ProductComment).filter(models.ProductComment.parent_id == comment.id).delete(synchronize_session=False)
     db.delete(comment)
     db.commit()
     return None

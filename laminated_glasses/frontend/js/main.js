@@ -435,7 +435,9 @@ async function fillConstructorStatus() {
   node.textContent = "…";
   try {
     const limit = await api("/constructor/limit");
-    node.textContent = limit.allowed
+    node.textContent = limit.unlimited
+      ? "cheklovsiz"
+      : limit.allowed
       ? "bugun foydalanish mumkin"
       : `yana ${formatWait(limit.retry_after_seconds)} dan so'ng`;
   } catch (_) {
@@ -629,6 +631,149 @@ function renderFilters() {
   state.categories.forEach((c) => make(c.name, c.name));
 }
 
+/* ---------- Mahsulot kartalaridagi rasmlar ----------
+   Kompyuter: sichqoncha olib kelinsa (yoki bosilsa) rasmlar birin-ketin almashadi.
+   Telefon (tor ekran yoki sensorli qurilma): har bir mahsulotning rasmlari O'ZI,
+   boshqalaridan mustaqil ravishda, o'ngdan surilib almashib turadi.
+   Har bir mahsulotning boshlanish vaqti va tezligi biroz farq qiladi -- hamma karta
+   bir vaqtda "sakramaydi". Ekrandan chiqib ketgan karta, yashirin tab va
+   "animatsiyani kamaytirish" yoqilgan qurilmada almashuv to'xtaydi. */
+
+const galleryCtls = [];
+let galleryIO = null;
+let galleryHooksBound = false;
+const autoGalleryMQ = window.matchMedia ? window.matchMedia("(max-width: 768px), (hover: none) and (pointer: coarse)") : null;
+const reducedMotionMQ = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+const galleryAuto = () => !!(autoGalleryMQ && autoGalleryMQ.matches && !(reducedMotionMQ && reducedMotionMQ.matches));
+
+function createGalleryCtl(gallery) {
+  const shots = Array.from(gallery.querySelectorAll(".gallery-shot"));
+  if (shots.length < 2) return null;
+  const countEl = gallery.querySelector(".gallery-count");
+  const period = 3400 + Math.random() * 1600;      // keyingi rasmgacha (ms), har mahsulotda boshqacha
+  const firstDelay = 900 + Math.random() * 2600;   // birinchi almashuvgacha (ms)
+  let current = 0;
+  let autoTimer = null;
+  let hoverTimer = null;
+  let visible = false;
+  let started = false;
+  let destroyed = false;
+
+  const paintCount = () => { if (countEl) countEl.textContent = `${current + 1} / ${shots.length}`; };
+
+  const show = (next) => {
+    const from = shots[current];
+    const to = shots[next];
+    if (from === to) return;
+    if (gallery.classList.contains("is-slide")) {
+      from.classList.remove("active");
+      from.classList.add("leaving");
+      void to.offsetWidth; // yangi rasm o'ng tomonda turgan holatni qayd etadi
+      to.classList.add("active");
+      window.setTimeout(() => {
+        // Chiqib ketgan rasm animatsiyasiz o'ng tomonga qaytariladi (keyingi aylanish uchun).
+        from.style.transition = "none";
+        from.classList.remove("leaving");
+        void from.offsetWidth;
+        from.style.transition = "";
+      }, 800);
+    } else {
+      from.classList.remove("active");
+      void to.offsetWidth;
+      to.classList.add("active");
+    }
+    current = next;
+    paintCount();
+  };
+
+  const ready = (img) => img.complete && img.naturalWidth > 0;
+  const preload = () => shots.forEach((img) => { img.loading = "eager"; });
+
+  const tick = () => {
+    autoTimer = null;
+    if (destroyed || !gallery.isConnected) return;
+    if (!(galleryAuto() && visible && !document.hidden)) return; // sync() qayta ishga tushiradi
+    const next = (current + 1) % shots.length;
+    if (!ready(shots[next])) { autoTimer = window.setTimeout(tick, 500); return; } // rasm hali yuklanmagan
+    show(next);
+    autoTimer = window.setTimeout(tick, period);
+  };
+  const startAuto = () => {
+    if (autoTimer || destroyed) return;
+    preload();
+    autoTimer = window.setTimeout(tick, started ? 1200 : firstDelay);
+    started = true;
+  };
+  const stopAuto = () => { window.clearTimeout(autoTimer); autoTimer = null; };
+
+  const sync = () => {
+    const auto = galleryAuto();
+    gallery.classList.toggle("is-slide", auto);
+    if (auto) { stopHover(); }
+    if (auto && visible && !document.hidden) startAuto(); else stopAuto();
+  };
+
+  // Kompyuter: sichqoncha bilan ko'rish.
+  const startHover = () => {
+    if (hoverTimer || galleryAuto()) return;
+    gallery.classList.add("is-playing");
+    show((current + 1) % shots.length);
+    hoverTimer = window.setInterval(() => {
+      if (!gallery.isConnected) { stopHover(); return; }
+      show((current + 1) % shots.length);
+    }, 2200);
+  };
+  function stopHover() {
+    window.clearInterval(hoverTimer);
+    hoverTimer = null;
+    gallery.classList.remove("is-playing");
+  }
+  gallery.addEventListener("mouseenter", startHover);
+  gallery.addEventListener("focusin", startHover);
+  gallery.addEventListener("click", startHover);
+  gallery.addEventListener("mouseleave", stopHover);
+  gallery.addEventListener("focusout", (event) => { if (!gallery.contains(event.relatedTarget)) stopHover(); });
+
+  return {
+    gallery,
+    sync,
+    setVisible(v) { visible = v; sync(); },
+    destroy() { destroyed = true; stopAuto(); stopHover(); },
+  };
+}
+
+function setupProductGalleries(grid) {
+  galleryCtls.splice(0).forEach((c) => c.destroy());
+  if (galleryIO) { galleryIO.disconnect(); galleryIO = null; }
+
+  const ctls = [];
+  grid.querySelectorAll(".product-gallery").forEach((gallery) => {
+    const ctl = createGalleryCtl(gallery);
+    if (ctl) { gallery.__ctl = ctl; ctls.push(ctl); }
+  });
+  galleryCtls.push(...ctls);
+
+  if ("IntersectionObserver" in window) {
+    galleryIO = new IntersectionObserver((entries) => {
+      entries.forEach((en) => { const ctl = en.target.__ctl; if (ctl) ctl.setVisible(en.isIntersecting); });
+    }, { threshold: 0.5 });
+    ctls.forEach((c) => galleryIO.observe(c.gallery));
+  } else {
+    ctls.forEach((c) => c.setVisible(true));
+  }
+
+  if (!galleryHooksBound) {
+    galleryHooksBound = true;
+    const resync = () => galleryCtls.forEach((c) => c.sync());
+    document.addEventListener("visibilitychange", resync);
+    [autoGalleryMQ, reducedMotionMQ].forEach((mq) => {
+      if (!mq) return;
+      if (mq.addEventListener) mq.addEventListener("change", resync);
+      else if (mq.addListener) mq.addListener(resync);
+    });
+  }
+}
+
 function renderProducts() {
   // #productGrid faqat katalog bo'lgan sahifalarda mavjud (yuqoridagi
   // renderFilters() dagi izohga qarang -- xuddi shu sababdan bu yerda
@@ -666,43 +811,7 @@ function renderProducts() {
     )
     .join("");
 
-  grid.querySelectorAll(".product-gallery").forEach((gallery) => {
-    const shots = Array.from(gallery.querySelectorAll(".gallery-shot"));
-    if (shots.length < 2) return;
-    let current = 0;
-    let timer = null;
-    const advance = () => {
-      if (!gallery.isConnected) { clearInterval(timer); return; }
-      const next = (current + 1) % shots.length;
-      shots[current].classList.remove("active");
-      // Force the browser to commit the outgoing frame before activating next.
-      void shots[next].offsetWidth;
-      shots[next].classList.add("active");
-      current = next;
-      const count = gallery.querySelector(".gallery-count");
-      if (count) count.textContent = `${current + 1} / ${shots.length}`;
-    };
-    const startSlideshow = () => {
-      if (timer) return;
-      gallery.classList.add("is-playing");
-      advance(); // immediate visible response on hover/click
-      timer = window.setInterval(advance, 2200);
-    };
-    const stopSlideshow = () => {
-      clearInterval(timer); timer = null;
-      gallery.classList.remove("is-playing");
-    };
-    gallery.addEventListener("mouseenter", startSlideshow);
-    gallery.addEventListener("focusin", startSlideshow);
-    gallery.addEventListener("click", (event) => {
-      // Clicking the image begins cycling; card click still opens detail modal.
-      startSlideshow();
-    });
-    gallery.addEventListener("mouseleave", stopSlideshow);
-    gallery.addEventListener("focusout", (event) => {
-      if (!gallery.contains(event.relatedTarget)) stopSlideshow();
-    });
-  });
+  setupProductGalleries(grid);
 
   grid.querySelectorAll("[data-add]").forEach((btn) => {
     btn.addEventListener("click", () => addToCart(Number(btn.dataset.add)));
@@ -943,11 +1052,13 @@ const SEND_SVG =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>';
 
 /* Admin tasdiqlash belgisi (rosetka + galochka). Statik, foydalanuvchi matni yo'q. */
+const REPLY_SVG =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>';
 const BADGE_SVG =
   '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" d="M12.00 1.10 L13.81 2.88 L16.17 1.93 L17.17 4.27 L19.71 4.29 L19.73 6.83 L22.07 7.83 L21.12 10.19 L22.90 12.00 L21.12 13.81 L22.07 16.17 L19.73 17.17 L19.71 19.71 L17.17 19.73 L16.17 22.07 L13.81 21.12 L12.00 22.90 L10.19 21.12 L7.83 22.07 L6.83 19.73 L4.29 19.71 L4.27 17.17 L1.93 16.17 L2.88 13.81 L1.10 12.00 L2.88 10.19 L1.93 7.83 L4.27 6.83 L4.29 4.29 L6.83 4.27 L7.83 1.93 L10.19 2.88Z"/><path fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="m7.6 12.4 3 3 5.8-6.2"/></svg>';
 
 const CM_PAGE = 20; // bir vaqtda chiqariladigan izohlar (uzun ro'yxat qotmasligi uchun)
-const cm = { productId: null, productName: "", data: null, editingId: null, shown: CM_PAGE, draft: "", busy: false, opener: null };
+const cm = { productId: null, productName: "", data: null, editingId: null, shown: CM_PAGE, draft: "", busy: false, opener: null, replyTo: null };
 
 /* Kuchsiz qurilmalarda (kam xotira/yadro) yoki "animatsiyani kamaytirish" yoqilgan bo'lsa
    oyna animatsiyasiz, yengil ishlaydi. */
@@ -1095,6 +1206,7 @@ function openComments(product, opener) {
   cm.productName = product.name || "";
   cm.data = null;
   cm.editingId = null;
+  cm.replyTo = null;
   cm.shown = CM_PAGE;
   cm.opener = opener || null;
   el("commentsTitle").textContent = "Izohlar";
@@ -1192,9 +1304,34 @@ function renderComments() {
   list.scrollTop = keepTop;
 }
 
-function buildComment(c) {
+function startReply(c) {
+  cm.replyTo = { id: c.id, name: c.name, body: c.body };
+  cm.editingId = null;
+  renderComments();
+  const ta = document.querySelector("#commentsForm textarea");
+  if (ta) ta.focus();
+}
+
+function buildComment(c, opts = {}) {
+  const isReply = !!opts.isReply;
+  const staff = !!(cm.data && cm.data.can_moderate);
   const row = document.createElement("article");
-  row.className = "cm-item" + (c.is_mine ? " mine" : "") + (c.is_admin ? " admin" : "");
+  row.className = "cm-item" + (c.is_mine ? " mine" : "") + (c.is_admin ? " admin" : "") + (isReply ? " is-reply" : "");
+  if (cm.replyTo && cm.replyTo.id === c.id) row.classList.add("replying");
+
+  // Faqat adminlar uchun: foydalanuvchi izohining CHAP tomonida "Javob berish" tugmasi.
+  if (staff && !isReply && !c.is_admin) {
+    const rb = document.createElement("button");
+    rb.type = "button";
+    rb.className = "cm-reply-btn";
+    rb.title = "Javob berish";
+    rb.setAttribute("aria-label", `${c.name} izohiga javob berish`);
+    rb.innerHTML = REPLY_SVG;
+    rb.addEventListener("click", () => startReply(c));
+    row.classList.add("has-reply-btn");
+    row.appendChild(rb);
+  }
+  else if (staff && !isReply) row.classList.add("reply-gutter");
   row.appendChild(avatarEl(c.name, c.avatar));
 
   const main = document.createElement("div");
@@ -1221,6 +1358,12 @@ function buildComment(c) {
     badge.append(icon, tag);
     top.appendChild(badge);
   }
+  if (isReply && c.reply_to) {
+    const to = document.createElement("span");
+    to.className = "cm-replyto";
+    to.textContent = `↪ ${c.reply_to}`;
+    top.appendChild(to);
+  }
   if (c.is_mine) {
     const you = document.createElement("span");
     you.className = "cm-you";
@@ -1242,29 +1385,40 @@ function buildComment(c) {
     text.textContent = c.body;
     main.appendChild(text);
 
-    if (c.is_mine) {
+    // Egasi o'z izohini tahrirlaydi/o'chiradi; admin esa HAR QANDAY izohni o'chira oladi.
+    if (c.is_mine || staff) {
       const actions = document.createElement("div");
       actions.className = "cm-actions";
-      if (c.edits_left > 0) {
-        const edit = document.createElement("button");
-        edit.type = "button";
-        edit.textContent = `Tahrirlash (${c.edits_left} ta qoldi)`;
-        edit.addEventListener("click", () => { cm.editingId = c.id; renderComments(); });
-        actions.appendChild(edit);
-      } else {
-        const done = document.createElement("span");
-        done.className = "cm-limit";
-        done.textContent = "Tahrir limiti tugagan";
-        actions.appendChild(done);
+      if (c.is_mine) {
+        if (c.edits_left > 0) {
+          const edit = document.createElement("button");
+          edit.type = "button";
+          edit.textContent = c.edits_left >= 100 ? "Tahrirlash" : `Tahrirlash (${c.edits_left} ta qoldi)`;
+          edit.addEventListener("click", () => { cm.editingId = c.id; renderComments(); });
+          actions.appendChild(edit);
+        } else {
+          const done = document.createElement("span");
+          done.className = "cm-limit";
+          done.textContent = "Tahrir limiti tugagan";
+          actions.appendChild(done);
+        }
       }
       const del = document.createElement("button");
       del.type = "button";
       del.className = "danger";
       del.textContent = "O'chirish";
-      del.addEventListener("click", () => deleteComment(c.id));
+      del.addEventListener("click", () => deleteComment(c.id, { others: !c.is_mine, replies: (c.replies || []).length }));
       actions.appendChild(del);
       main.appendChild(actions);
     }
+  }
+
+  // Shu izohga yozilgan admin javoblari (eskisidan yangisiga).
+  if (!isReply && c.replies && c.replies.length) {
+    const box = document.createElement("div");
+    box.className = "cm-replies";
+    c.replies.forEach((r) => box.appendChild(buildComment(r, { isReply: true })));
+    main.appendChild(box);
   }
   row.appendChild(main);
   return row;
@@ -1353,8 +1507,9 @@ function renderComposer() {
   }
 
   const max = data.comment_max_length;
+  const staff = !!data.can_moderate;
   const left = Math.max(0, data.comment_limit - data.my_comment_count);
-  if (left === 0) {
+  if (!staff && left === 0) {
     const full = document.createElement("p");
     full.className = "cm-hint cm-full";
     full.textContent = `Siz bu mahsulotga ${data.comment_limit} ta izoh yozib bo'ldingiz. Yangisini yozish uchun avval eskisini o'chiring.`;
@@ -1374,7 +1529,7 @@ function renderComposer() {
   input.rows = 1;
   input.maxLength = max;
   input.value = cm.draft || "";
-  input.placeholder = "Fikringizni yozing…";
+  input.placeholder = cm.replyTo ? "Javobingizni yozing…" : "Fikringizni yozing…";
   input.setAttribute("aria-label", "Izoh matni");
   input.setAttribute("enterkeyhint", "send");
   input.autocomplete = "off";
@@ -1395,7 +1550,7 @@ function renderComposer() {
   hint.className = "cm-hint cm-hint-row";
   const count = document.createElement("span");
   const note = document.createElement("span");
-  note.textContent = `Yana ${left} ta izoh yozishingiz mumkin`;
+  note.textContent = staff ? "Admin: cheklovsiz" : `Yana ${left} ta izoh yozishingiz mumkin`;
   hint.append(count, note);
 
   const privacy = document.createElement("p");
@@ -1414,7 +1569,27 @@ function renderComposer() {
     if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); if (form.requestSubmit) form.requestSubmit(); else send.click(); }
   });
 
-  form.append(line, err, hint, privacy);
+  if (cm.replyTo) {
+    const bar = document.createElement("div");
+    bar.className = "cm-replying";
+    const label = document.createElement("div");
+    label.className = "cm-replying-text";
+    const who = document.createElement("strong");
+    who.textContent = `${cm.replyTo.name} ga javob`;
+    const quote = document.createElement("span");
+    quote.textContent = cm.replyTo.body;
+    label.append(who, quote);
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "cm-replying-x";
+    cancel.setAttribute("aria-label", "Javob yozishni bekor qilish");
+    cancel.textContent = "✕";
+    cancel.addEventListener("click", () => { cm.replyTo = null; renderComments(); });
+    bar.append(label, cancel);
+    form.append(bar);
+  }
+  form.append(line, err, hint);
+  if (!staff) form.append(privacy);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1424,11 +1599,15 @@ function renderComposer() {
     cm.busy = true;
     send.disabled = true;
     try {
-      await api(`/products/${cm.productId}/comments`, { method: "POST", body: JSON.stringify({ body: text }) });
+      const isReply = !!cm.replyTo;
+      const payload = { body: text };
+      if (isReply) payload.reply_to_id = cm.replyTo.id;
+      await api(`/products/${cm.productId}/comments`, { method: "POST", body: JSON.stringify(payload) });
       cm.draft = "";
-      cm.shown = CM_PAGE;
-      await loadComments(cm.productId, { top: true });
-      showToast("Izoh qo'shildi.");
+      cm.replyTo = null;
+      if (!isReply) cm.shown = CM_PAGE;
+      await loadComments(cm.productId, isReply ? {} : { top: true });
+      showToast(isReply ? "Javob yuborildi." : "Izoh qo'shildi.");
     } catch (e2) {
       if (e2.status === 401) return;
       err.textContent = friendlyError(e2);
@@ -1442,11 +1621,16 @@ function renderComposer() {
   grow();
 }
 
-async function deleteComment(commentId) {
-  if (!(await lgConfirm({ tone: "danger", title: "Izohni o'chirish", message: "Izohingiz hamma uchun o'chiriladi.", confirmText: "Ha, o'chirish" }))) return;
+async function deleteComment(commentId, opts = {}) {
+  const whose = opts.others ? "Bu izoh" : "Izohingiz";
+  const message = opts.replies
+    ? `${whose} va unga yozilgan javoblar hamma uchun o'chiriladi.`
+    : `${whose} hamma uchun o'chiriladi.`;
+  if (!(await lgConfirm({ tone: "danger", title: "Izohni o'chirish", message, confirmText: "Ha, o'chirish" }))) return;
   const productId = cm.productId;
   try {
     await api(`/comments/${commentId}`, { method: "DELETE" });
+    if (cm.replyTo && cm.replyTo.id === commentId) cm.replyTo = null;
     if (cm.productId === productId) await loadComments(productId);
     showToast("Izoh o'chirildi.");
   } catch (err) {
@@ -1481,7 +1665,7 @@ document.addEventListener("lg:auth", (e) => {
   socialUserId = id;
   if (!id) {
     (state.products || []).forEach((p) => { p.liked = false; paintProductSocial(p.id); });
-    if (cm.data) { cm.data.liked = false; cm.data.my_comment_count = 0; cm.data.comments.forEach((c) => { c.is_mine = false; c.edits_left = 0; }); cm.editingId = null; renderComments(); }
+    if (cm.data) { cm.data.liked = false; cm.data.my_comment_count = 0; cm.data.can_moderate = false; cm.replyTo = null; const clear = (c) => { c.is_mine = false; c.edits_left = 0; (c.replies || []).forEach(clear); }; cm.data.comments.forEach(clear); cm.editingId = null; renderComments(); }
     return;
   }
   refreshProductSocial();

@@ -24,6 +24,7 @@ _COLUMN_MIGRATIONS = [
     ("customers", "locale", "VARCHAR(20)"),
     ("customers", "is_staff", "INTEGER NOT NULL DEFAULT 0"),
     ("product_comments", "edit_count", "INTEGER NOT NULL DEFAULT 0"),
+    ("product_comments", "parent_id", "INTEGER"),
     ("customers", "name_confirmed", "INTEGER NOT NULL DEFAULT 0"),
     ("customers", "login_count", "INTEGER NOT NULL DEFAULT 0"),
     ("customers", "last_login_at", "DATETIME"),
@@ -40,6 +41,7 @@ _INDEX_MIGRATIONS = [
     # Tez-tez ishlatiladigan so'rovlar uchun kompozit indekslar (admin ro'yxatlar,
     # statistika, savat, tozalash vazifalari).
     "CREATE INDEX IF NOT EXISTS ix_comments_product_created ON product_comments (product_id, created_at)",
+    "CREATE INDEX IF NOT EXISTS ix_product_comments_parent_id ON product_comments (parent_id)",
     "CREATE INDEX IF NOT EXISTS ix_orders_status_created ON orders (status, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_orders_customer_created ON orders (customer_id, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_cart_customer_expires ON cart_items (customer_id, expires_at)",

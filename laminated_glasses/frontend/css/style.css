@@ -2694,3 +2694,151 @@ p.cm-empty-text:only-child { padding: 40px 0; text-align: center; }
   .comments-sheet { animation: none; }
   .comment-btn { transition: none; }
 }
+
+/* ---------- Izohlarga admin javoblari ---------- */
+
+/* Admin uchun: foydalanuvchi izohining chap tomonidagi yagona "Javob berish" tugmasi. */
+.cm-reply-btn {
+  flex: none;
+  align-self: flex-start;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-top: 3px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--sky-deep);
+  cursor: pointer;
+  transition: transform 0.18s var(--ease), background-color 0.18s var(--ease), color 0.18s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cm-reply-btn:hover { background: var(--sky-deep); color: var(--white); transform: scale(1.07); }
+.cm-reply-btn:active { transform: scale(0.94); }
+.cm-reply-btn:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+
+/* Hozir javob yozilayotgan izoh ajralib turadi. */
+.cm-item.replying {
+  background: rgba(46, 134, 200, 0.08);
+  border-radius: 12px;
+  box-shadow: inset 3px 0 0 var(--sky);
+}
+
+.cm-replies {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line-strong);
+}
+
+.cm-item.is-reply { padding: 10px 0 6px 5px; border-bottom: 0; } /* 5px: admin halqasi kesilmasin */
+/* Admin ko'rinishida avatarlar bir chiziqda tursin (Javob tugmasi o'rnini bo'sh qoldiramiz). */
+.cm-item.reply-gutter { padding-left: 51px; }
+.cm-item.is-reply + .cm-item.is-reply { border-top: 1px dashed var(--line); }
+.cm-item.is-reply .cm-avatar { width: 30px; height: 30px; font-size: 0.82rem; }
+
+.cm-replyto { font-size: 0.76rem; font-weight: 700; color: var(--sky-deep); }
+
+/* Pastdagi yozish joyidagi "kimga javob" paneli. */
+.cm-replying {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 8px 10px 8px 12px;
+  border-left: 3px solid var(--sky);
+  border-radius: 8px;
+  background: var(--ice);
+  animation: cm-reply-in 0.22s var(--ease);
+}
+
+.cm-replying-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cm-replying-text strong { font-size: 0.8rem; color: var(--sky-deep); }
+.cm-replying-text span {
+  font-size: 0.8rem;
+  color: var(--navy-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cm-replying-x {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--navy-soft);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.cm-replying-x:hover { background: var(--ice-2); color: var(--navy); }
+
+@keyframes cm-reply-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- Telefon: mahsulot rasmlari o'zi surilib almashadi (js: setupProductGalleries) ---------- */
+.product-gallery.is-slide .gallery-shot {
+  opacity: 1;
+  filter: none;
+  transform: translate3d(100%, 0, 0); /* navbatdagi rasm o'ng tomonda kutib turadi */
+  transition: transform 0.75s var(--ease);
+}
+.product-gallery.is-slide .gallery-shot.active { transform: translate3d(0, 0, 0); z-index: 2; }
+.product-gallery.is-slide .gallery-shot.leaving { transform: translate3d(-100%, 0, 0); z-index: 1; }
+/* Sensorli ekranda :hover "yopishib" qoladi -- surilish buzilmasin. */
+.product-media:hover .product-gallery.is-slide .gallery-shot.active { transform: translate3d(0, 0, 0); filter: none; }
+
+/* ---------- UI tuzatishlari ---------- */
+
+/* Yopiq savat paneli o'z soyasi bilan ekranning o'ng chetini xiralashtirib turardi
+   (barcha sahifalarda). Yopiq paytda soya ham, panel ham ko'rinmaydi (Tab bilan ham
+   ichiga kirib bo'lmaydi); yopilish animatsiyasi esa saqlanadi. */
+.drawer {
+  visibility: hidden;
+  box-shadow: none;
+  transition: transform 0.26s var(--ease), box-shadow 0.26s var(--ease), visibility 0s linear 0.26s;
+}
+.drawer.open {
+  visibility: visible;
+  box-shadow: -20px 0 50px rgba(6, 38, 61, 0.22);
+  transition: transform 0.26s var(--ease), box-shadow 0.26s var(--ease), visibility 0s;
+}
+
+/* Mobil menyu paneli ham yopiq paytda soyasi bilan ekran chetini xiralashtirardi. */
+.mobile-nav {
+  visibility: hidden;
+  box-shadow: none;
+  transition: transform 0.28s var(--ease), box-shadow 0.28s var(--ease), visibility 0s linear 0.28s;
+}
+.mobile-nav.open {
+  visibility: visible;
+  box-shadow: var(--shadow-lift);
+  transition: transform 0.28s var(--ease), box-shadow 0.28s var(--ease), visibility 0s;
+}
+
+/* Bezak elementlar (orbitalar, yaltirash) tufayli sahifa yon tomonga siljimasin. */
+body { overflow-x: clip; }
+
+/* Juda tor telefonlar (320–400px): sarlavha sig'ib, "Savat" ekrandan chiqib ketmasin. */
+.brand { min-width: 0; }
+.brand span { min-width: 0; }
+.header-side { flex: none; }
+
+@media (max-width: 400px) {
+  .site-header .wrap { gap: 8px; }
+  .brand { gap: 8px; font-size: 0.95rem; }
+  .brand-mark { width: 30px; height: 30px; }
+  .brand small { display: none; }
+  .header-side { gap: 6px; }
+  .cart-btn { padding: 9px 12px; gap: 6px; }
+  .user-chip { padding: 5px; }
+  .menu-toggle { width: 40px; height: 40px; }
+}

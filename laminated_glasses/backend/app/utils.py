@@ -210,7 +210,7 @@ _INVISIBLE_CHARS = dict.fromkeys(
 )
 
 
-def clean_comment_text(raw: str) -> str:
+def clean_comment_text(raw: str, max_length: "int | None" = None) -> str:
     """Izoh matnini tekshiradi va tozalaydi. Yaroqsiz bo'lsa ValueError
     (matni foydalanuvchiga ko'rsatiladi) ko'taradi.
 
@@ -223,8 +223,9 @@ def clean_comment_text(raw: str) -> str:
         raise ValueError("Izoh bo'sh bo'lmasin.")
     if any(unicodedata.category(ch) == "Cc" for ch in text):
         raise ValueError("Izohda ruxsat etilmagan belgilar bor.")
-    if len(text) > config.COMMENT_MAX_LENGTH:
-        raise ValueError(f"Izoh {config.COMMENT_MAX_LENGTH} ta belgidan oshmasin.")
+    limit = max_length or config.COMMENT_MAX_LENGTH
+    if len(text) > limit:
+        raise ValueError(f"Izoh {limit} ta belgidan oshmasin.")
     return text
 
 

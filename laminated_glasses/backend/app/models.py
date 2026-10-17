@@ -412,3 +412,6 @@ class ProductComment(Base):
     edited_at = Column(DateTime, nullable=True)
     # Izoh necha marta tahrirlangan (limit: config.COMMENT_MAX_EDITS).
     edit_count = Column(Integer, nullable=False, default=0, server_default="0")
+    # Admin javobi bo'lsa -- javob berilgan (asosiy) izohning id'si. Oddiy izohlarda NULL.
+    # Javoblar faqat bitta daraja: asosiy izoh -> uning javoblari.
+    parent_id = Column(Integer, nullable=True, index=True)

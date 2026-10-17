@@ -512,7 +512,7 @@ document.addEventListener("DOMContentLoaded",()=>{
      yuklab olish va Telegramga yuborish bir "foydalanish" hisoblanadi.
      Telegramga yuborish (server) faqat faol foydalanishi bor akkauntga ishlaydi. */
   const session = { started: false, saved: false };
-  let limit = { loaded: false, allowed: true, hours: 24, until: 0 };
+  let limit = { loaded: false, allowed: true, hours: 24, until: 0, unlimited: false };
   let customer = (typeof currentCustomer === 'function') ? currentCustomer() : null;
   let authReady = (typeof isAuthChecked === 'function') ? isAuthChecked() : false;
   let limitTick = null;
@@ -546,7 +546,11 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
 
     let title, text;
-    if(session.started){
+    if(limit.loaded && limit.unlimited){
+      title = "Cheklovsiz foydalanish";
+      text = "Siz admin sifatida konstruktordan hohlagancha foydalana olasiz: rasm yuklash, o'lchamni almashtirish, yuklab olish va Telegramga yuborish uchun hech qanday limit yo'q.";
+      box.classList.add('is-ok');
+    } else if(session.started){
       title = "Bu — bugungi imkoniyatingiz";
       text = `Sahifani yangilasangiz yoki yopsangiz, dizayn yo'qoladi va konstruktordan qayta foydalanish uchun ${limit.hours} soat kutish kerak. Tayyor dizaynni yuklab oling yoki Telegramga yuboring.`;
       box.classList.add('is-ok');
@@ -576,6 +580,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       allowed: !!r.allowed,
       hours: r.limit_hours || limit.hours,
       until: r.allowed ? 0 : Date.now() + (Number(r.retry_after_seconds)||0) * 1000,
+      unlimited: !!r.unlimited,
     };
     renderLimit();
     clearInterval(limitTick);
@@ -623,7 +628,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     customer = next;
     if(changed){
       resetDesign();
-      limit = { loaded: false, allowed: true, hours: limit.hours, until: 0 };
+      limit = { loaded: false, allowed: true, hours: limit.hours, until: 0, unlimited: false };
       clearInterval(limitTick); limitTick = null;
       renderStage();
       if(customer) loadLimit();
@@ -855,9 +860,14 @@ document.addEventListener("DOMContentLoaded",()=>{
           $('constructorError').textContent = blockedMessage();
           return;
         }
-        session.started = true;
-        session.saved = false;
-        applyLimit({ allowed: false, limit_hours: r.limit_hours, retry_after_seconds: r.limit_hours * 3600 });
+        if(r.unlimited){
+          // Admin: limit sarflanmaydi, sahifani yopish haqida ogohlantirish ham yo'q.
+          applyLimit(r);
+        } else {
+          session.started = true;
+          session.saved = false;
+          applyLimit({ allowed: false, limit_hours: r.limit_hours, retry_after_seconds: r.limit_hours * 3600 });
+        }
       }
 
       state.imageSrc = dataUrl;

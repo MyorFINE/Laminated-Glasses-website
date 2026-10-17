@@ -168,6 +168,8 @@ MAX_CART_ITEM_QUANTITY = 99
 # shuncha izoh yoza oladi va har bir izoh shuncha belgidan oshmaydi.
 COMMENT_MAX_PER_USER_PER_PRODUCT = 5
 COMMENT_MAX_LENGTH = 100
+# Admin (is_staff) javoblari/izohlari uchun uzunlik (bazadagi ustun 500 belgi).
+COMMENT_STAFF_MAX_LENGTH = 500
 # Har bir izohni egasi eng ko'pi bilan shuncha marta tahrirlay oladi.
 COMMENT_MAX_EDITS = 3
 # Xavfli (XSS/SQL) matn yuborilganda izoh egasiga ko'rsatiladigan xabar.

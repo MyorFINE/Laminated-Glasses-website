@@ -58,6 +58,8 @@ class CustomerOut(BaseModel):
     created_at: datetime
     # False bo'lsa frontend ism so'rash oynasini ochadi.
     name_confirmed: bool = False
+    # Admin qilib tayinlangan akkaunt: cheklovlarsiz, izohlarni boshqara oladi.
+    is_staff: bool = False
 
     class Config:
         from_attributes = True
@@ -76,6 +78,7 @@ class ConstructorLimitOut(BaseModel):
     allowed: bool          # hozir yangi foydalanishni boshlash mumkinmi
     limit_hours: int       # limit oynasi (soat)
     retry_after_seconds: int = 0  # allowed=False bo'lsa, qancha soniyadan keyin
+    unlimited: bool = False       # admin: limit umuman qo'llanmaydi
 
 
 class AuthOut(BaseModel):
@@ -548,6 +551,8 @@ class CommentIn(BaseModel):
     juda katta so'rovlardan himoya."""
 
     body: str = Field(min_length=1, max_length=1000)
+    # Faqat adminlar uchun: shu izohga javob sifatida yoziladi.
+    reply_to_id: Optional[int] = Field(default=None, ge=1)
 
 
 class CommentOut(BaseModel):
@@ -564,10 +569,18 @@ class CommentOut(BaseModel):
     is_admin: bool = False
     # Faqat izoh egasi uchun: yana necha marta tahrirlash mumkin.
     edits_left: int = 0
+    # Javob bo'lsa: kimga javob berilgani (asosiy izoh egasining ismi).
+    parent_id: Optional[int] = None
+    reply_to: Optional[str] = None
+    # Shu izohning javoblari (eskisidan yangisiga).
+    replies: List["CommentOut"] = Field(default_factory=list)
 
     @field_serializer("created_at")
     def _serialize_utc(self, value: datetime) -> str:
         return value.isoformat() + "Z"
+
+
+CommentOut.model_rebuild()
 
 
 class ProductSocialOut(BaseModel):
@@ -579,6 +592,8 @@ class ProductSocialOut(BaseModel):
     comment_limit: int
     comment_max_length: int
     comment_max_edits: int = 3
+    # Admin: izohlarni o'chira oladi, javob yoza oladi, limitlar yo'q.
+    can_moderate: bool = False
 
 
 class LikeOut(BaseModel):
