@@ -80,6 +80,52 @@
   .constructor-zoom-btn:hover{background:var(--white);}
   .constructor-artwork{cursor:zoom-in;}
   .constructor-zoom-modal{max-width:min(92vw,760px);}
+
+  /* ---- Rasm tahrirlash paneli ---- */
+  .ce{margin-top:26px;border-top:1px solid var(--line);padding-top:22px;}
+  .ce[hidden]{display:none;}
+  .ce .constructor-step{margin-top:0 !important;}
+  .ce-quality{display:flex;align-items:center;gap:8px;font-size:0.8rem;font-weight:700;border-radius:var(--radius-sm);padding:9px 12px;margin:0 0 14px;background:var(--ice);color:var(--navy);}
+  .ce-quality i{width:9px;height:9px;border-radius:50%;background:#2f9e63;flex:none;}
+  .ce-quality.mid i{background:var(--amber);} .ce-quality.low i{background:#c8442f;}
+  .ce-quality small{font-weight:500;color:var(--navy-soft);margin-left:auto;text-align:right;}
+  .ce-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin-bottom:14px;}
+  .ce-tool{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 6px;border:1.5px solid var(--line-strong);border-radius:var(--radius-md);background:var(--ice);color:var(--navy);font:600 0.76rem var(--font-body);cursor:pointer;transition:border-color .16s var(--ease),transform .16s var(--ease),background .16s var(--ease);}
+  .ce-tool svg{width:20px;height:20px;}
+  .ce-tool:hover{border-color:var(--sky);transform:translateY(-1px);}
+  .ce-tool.primary{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .ce-seg{display:grid;grid-template-columns:1fr 1fr;background:var(--ice-2);border-radius:999px;padding:4px;margin-bottom:16px;}
+  .ce-seg button{border:0;background:transparent;border-radius:999px;padding:8px 10px;font:700 0.8rem var(--font-body);color:var(--navy-soft);cursor:pointer;}
+  .ce-seg button.active{background:var(--white);color:var(--navy);box-shadow:0 2px 8px rgba(6,38,61,.14);}
+  .ce-row{margin:0 0 12px;}
+  .ce-row label{display:flex;justify-content:space-between;font-size:0.8rem;font-weight:700;color:var(--navy);margin-bottom:5px;}
+  .ce-row output{color:var(--sky-deep);font-variant-numeric:tabular-nums;}
+  .ce-row input[type=range]{width:100%;accent-color:var(--sky);height:26px;margin:0;touch-action:pan-y;}
+  .ce-chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px;}
+  .ce-chip{border:1.5px solid var(--line-strong);background:var(--white);border-radius:999px;padding:7px 14px;font:700 0.78rem var(--font-body);color:var(--navy);cursor:pointer;}
+  .ce-chip.active{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .ce-hint{margin:6px 0 0;font-size:0.76rem;color:var(--navy-soft);line-height:1.5;}
+  .constructor-artwork.editable{cursor:grab;touch-action:none;}
+  .constructor-artwork.editable.dragging{cursor:grabbing;}
+  .constructor-pane.contain{background:#fff;}
+  .ce-crop-modal{max-width:min(94vw,820px);width:100%;padding:22px 22px 20px;box-sizing:border-box;max-height:94vh;overflow:auto;}
+  @media (min-width:861px){.constructor-grid>.constructor-panel:nth-child(2){position:sticky;top:84px;}}
+  .ce-crop-modal h3{margin:0 0 12px;font-family:var(--font-head);color:var(--navy);}
+  .ce-ratios{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .ce-crop-stage{position:relative;display:block;width:fit-content;max-width:100%;margin:0 auto;line-height:0;overflow:hidden;border-radius:10px;touch-action:none;user-select:none;background:#0b1c2a;}
+  .ce-crop-stage img{display:block;max-width:100%;max-height:58vh;pointer-events:none;-webkit-user-drag:none;}
+  .ce-crop-box{position:absolute;border:2px solid #fff;box-shadow:0 0 0 9999px rgba(6,20,32,.58);cursor:move;touch-action:none;}
+  .ce-crop-box::before,.ce-crop-box::after{content:"";position:absolute;pointer-events:none;background:rgba(255,255,255,.45);}
+  .ce-crop-box::before{left:33.33%;right:33.33%;top:0;bottom:0;border-left:1px solid rgba(255,255,255,.55);border-right:1px solid rgba(255,255,255,.55);background:none;}
+  .ce-crop-box::after{top:33.33%;bottom:33.33%;left:0;right:0;border-top:1px solid rgba(255,255,255,.55);border-bottom:1px solid rgba(255,255,255,.55);background:none;}
+  .ce-h{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;display:flex;align-items:center;justify-content:center;touch-action:none;z-index:2;}
+  .ce-h::after{content:"";width:12px;height:12px;background:#fff;border-radius:3px;box-shadow:0 1px 5px rgba(0,0,0,.45);}
+  .ce-h[data-h=nw]{left:0;top:0;cursor:nwse-resize;} .ce-h[data-h=n]{left:50%;top:0;cursor:ns-resize;} .ce-h[data-h=ne]{left:100%;top:0;cursor:nesw-resize;}
+  .ce-h[data-h=e]{left:100%;top:50%;cursor:ew-resize;} .ce-h[data-h=se]{left:100%;top:100%;cursor:nwse-resize;} .ce-h[data-h=s]{left:50%;top:100%;cursor:ns-resize;}
+  .ce-h[data-h=sw]{left:0;top:100%;cursor:nesw-resize;} .ce-h[data-h=w]{left:0;top:50%;cursor:ew-resize;}
+  .ce-crop-box.locked .ce-h[data-h=n],.ce-crop-box.locked .ce-h[data-h=e],.ce-crop-box.locked .ce-h[data-h=s],.ce-crop-box.locked .ce-h[data-h=w]{display:none;}
+  .ce-crop-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;}
+  .ce-crop-info{font-size:0.78rem;color:var(--navy-soft);margin:10px 0 0;text-align:center;}
 </style>
 </head>
 <body>
@@ -203,6 +249,34 @@
         </label>
         <div class="constructor-error" id="constructorError"></div>
         <div class="constructor-limit" id="constructorLimit" hidden></div>
+
+        <div class="ce" id="constructorEditor" hidden>
+          <h3 class="constructor-step">3. Rasmni tahrirlang</h3>
+          <div class="ce-quality" id="ceQuality"></div>
+          <div class="ce-tools">
+            <button type="button" class="ce-tool primary" id="ceCropBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>Kesish</button>
+            <button type="button" class="ce-tool" id="ceRotL"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Chapga 90°</button>
+            <button type="button" class="ce-tool" id="ceRotR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>O'ngga 90°</button>
+            <button type="button" class="ce-tool" id="ceFlip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7 3 12l5 5V7z"/><path d="m16 7 5 5-5 5V7z"/></svg>Ko'zgu</button>
+            <button type="button" class="ce-tool" id="ceCenter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>Markazlash</button>
+            <button type="button" class="ce-tool" id="ceReset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg>Asliga qaytarish</button>
+          </div>
+          <div class="ce-seg" id="ceFit" role="group" aria-label="Joylashtirish usuli">
+            <button type="button" data-fit="cover" class="active">Ramkani to'ldirish</button>
+            <button type="button" data-fit="contain">Butunlay sig'dirish</button>
+          </div>
+          <div class="ce-row"><label for="ceZoom">Masshtab <output id="ceZoomOut">100%</output></label><input type="range" id="ceZoom" min="100" max="400" value="100" /></div>
+          <div class="ce-row"><label for="ceBright">Yorqinlik <output id="ceBrightOut">0</output></label><input type="range" id="ceBright" min="40" max="170" value="100" /></div>
+          <div class="ce-row"><label for="ceContrast">Kontrast <output id="ceContrastOut">0</output></label><input type="range" id="ceContrast" min="50" max="160" value="100" /></div>
+          <div class="ce-row"><label for="ceSat">To'yinganlik <output id="ceSatOut">0</output></label><input type="range" id="ceSat" min="0" max="220" value="100" /></div>
+          <div class="ce-chips" id="ceChips">
+            <button type="button" class="ce-chip active" data-fx="none">Asl rang</button>
+            <button type="button" class="ce-chip" data-fx="gray">Qora-oq</button>
+            <button type="button" class="ce-chip" data-fx="sepia">Sepiya</button>
+            <button type="button" class="ce-chip" data-fx="vivid">Jonli</button>
+          </div>
+          <p class="ce-hint">Rasmni ko'rinish oynasida sichqoncha yoki barmoq bilan suring; sichqoncha g'ildiragi yoki ikki barmoq bilan kattalashtiring. Eng oxirgi ko'rinish aynan yuklab olinadi va Telegramga yuboriladi.</p>
+        </div>
       </div>
 
       <div class="constructor-panel">
@@ -490,6 +564,35 @@
   </div>
 </div>
 
+<!-- Rasmni kesish oynasi -->
+<div class="modal-overlay" id="ceCropModal">
+  <div class="modal ce-crop-modal">
+    <button class="modal-close" id="ceCropClose" aria-label="Yopish">✕</button>
+    <h3>Rasmni kesish</h3>
+    <div class="ce-ratios" id="ceRatios">
+      <button type="button" class="ce-chip active" data-r="free">Erkin</button>
+      <button type="button" class="ce-chip" data-r="frame">Ramka nisbati</button>
+      <button type="button" class="ce-chip" data-r="1">1:1</button>
+      <button type="button" class="ce-chip" data-r="1.3333">4:3</button>
+      <button type="button" class="ce-chip" data-r="0.75">3:4</button>
+      <button type="button" class="ce-chip" data-r="1.7778">16:9</button>
+    </div>
+    <div class="ce-crop-stage" id="ceCropStage">
+      <img id="ceCropImg" alt="" />
+      <div class="ce-crop-box" id="ceCropBox">
+        <i class="ce-h" data-h="nw"></i><i class="ce-h" data-h="n"></i><i class="ce-h" data-h="ne"></i>
+        <i class="ce-h" data-h="e"></i><i class="ce-h" data-h="se"></i><i class="ce-h" data-h="s"></i>
+        <i class="ce-h" data-h="sw"></i><i class="ce-h" data-h="w"></i>
+      </div>
+    </div>
+    <p class="ce-crop-info" id="ceCropInfo"></p>
+    <div class="ce-crop-actions">
+      <button type="button" class="btn btn-ghost" id="ceCropCancel">Bekor qilish</button>
+      <button type="button" class="btn btn-accent" id="ceCropApply">Kesishni qo'llash</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="/js/dialogs.js"></script>
@@ -504,7 +607,18 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 <script>
 (function(){
-  const state = { sizes: [], selectedId: null, imageSrc: '', imageObj: null };
+  const state = {
+    sizes: [], selectedId: null,
+    imageSrc: '',      // ko'rinish (preview) uchun ishchi rasm (blob URL)
+    imageObj: null,    // ishchi rasm tayyor ekanini bildiradi (state.work bilan bir xil)
+    originalSrc: '',   // foydalanuvchi yuklagan asl fayl (data URL) — Telegramga o'zgarmagan holda ketadi
+    work: null,        // ishchi canvas (burilish/kesishdan keyingi rasm)
+    view: { zoom: 1, px: 0, py: 0, fit: 'cover' },
+    adj: { b: 100, c: 100, s: 100, gray: false, sepia: false },
+  };
+  const MAX_WORK_SIDE = 3200;
+  let paneImgs = [];
+  let frame = { w: 0, h: 0, scale: 1 };
 
   /* ---- Konstruktor limiti: har bir Google akkaunt (Gmail) uchun N soatda 1 marta ----
      Rasm yuklanganda /constructor/start chaqiriladi va limit sarflanadi. Shu
@@ -615,7 +729,10 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   function resetDesign(){
     session.started = false; session.saved = false;
-    state.imageSrc = ''; state.imageObj = null;
+    if(state.imageSrc && state.imageSrc.startsWith('blob:')) URL.revokeObjectURL(state.imageSrc);
+    state.imageSrc = ''; state.imageObj = null; state.work = null; state.originalSrc = '';
+    state.view = { zoom: 1, px: 0, py: 0, fit: 'cover' };
+    state.adj = { b: 100, c: 100, s: 100, gray: false, sepia: false };
     $('constructorDropText').textContent = DROP_DEFAULT_TEXT;
     $('constructorImageInput').value = '';
   }
@@ -692,6 +809,76 @@ document.addEventListener("DOMContentLoaded",()=>{
   /* Rasmni tanlangan o'lchamning har bir paneliga bitta uzluksiz tasvir
      sifatida bo'lib, 3D-shisha ko'rinishida chizadi (index.html
      prototipidagi animatsiyalar bilan bir xil). */
+  /* Rasmning ramka ichidagi joylashuvi (preview va yuklab olish uchun BIR XIL formula).
+     pan (px, py) ramka eni/bo'yiga nisbatan ulush sifatida saqlanadi, shuning uchun
+     har qanday o'lchamda bir xil natija beradi. */
+  function layout(frameW, frameH){
+    const iw = state.work.width, ih = state.work.height;
+    const base = state.view.fit === 'contain'
+      ? Math.min(frameW/iw, frameH/ih)
+      : Math.max(frameW/iw, frameH/ih);
+    const k = base * state.view.zoom;
+    const rw = iw*k, rh = ih*k;
+    const lim = (r, f) => Math.abs(r - f) / 2 / f;
+    const limX = lim(rw, frameW), limY = lim(rh, frameH);
+    const px = Math.max(-limX, Math.min(limX, state.view.px));
+    const py = Math.max(-limY, Math.min(limY, state.view.py));
+    return { rw, rh, px, py, limX, limY, ox: (frameW-rw)/2 + px*frameW, oy: (frameH-rh)/2 + py*frameH };
+  }
+
+  /* CSS filter satri (preview) — yuklab olishdagi piksel formulalari bilan bir xil. */
+  function cssFilter(){
+    const a = state.adj;
+    let f = `brightness(${a.b/100}) contrast(${a.c/100}) saturate(${a.s/100})`;
+    if(a.gray) f += ' grayscale(1)';
+    if(a.sepia) f += ' sepia(1)';
+    return f;
+  }
+  function isDefaultAdj(){ const a=state.adj; return a.b===100 && a.c===100 && a.s===100 && !a.gray && !a.sepia; }
+
+  /* Piksellarga filtr qo'llash (Safari'da ctx.filter ishonchli emas, shuning uchun qo'lda). */
+  function applyAdjustPixels(ctx, w, h){
+    if(isDefaultAdj()) return;
+    const a = state.adj, d = ctx.getImageData(0, 0, w, h), px = d.data;
+    const B = a.b/100, C = a.c/100, S = a.s/100;
+    const cl = v => v < 0 ? 0 : v > 1 ? 1 : v;
+    const s1 = 0.213+0.787*S, s2 = 0.715-0.715*S, s3 = 0.072-0.072*S;
+    const s4 = 0.213-0.213*S, s5 = 0.715+0.285*S, s6 = 0.213-0.213*S, s7 = 0.715-0.715*S, s8 = 0.072+0.928*S;
+    for(let i=0;i<px.length;i+=4){
+      let r = px[i]/255*B, g = px[i+1]/255*B, b = px[i+2]/255*B;
+      r = cl(r); g = cl(g); b = cl(b);
+      r = cl((r-0.5)*C+0.5); g = cl((g-0.5)*C+0.5); b = cl((b-0.5)*C+0.5);
+      const r2 = cl(s1*r + s2*g + s3*b), g2 = cl(s4*r + s5*g + s3*b), b2 = cl(s6*r + s7*g + s8*b);
+      r = r2; g = g2; b = b2;
+      if(a.gray){ const y = 0.2126*r + 0.7152*g + 0.0722*b; r = g = b = y; }
+      if(a.sepia){
+        const r3 = cl(0.393*r + 0.769*g + 0.189*b), g3 = cl(0.349*r + 0.686*g + 0.168*b), b3 = cl(0.272*r + 0.534*g + 0.131*b);
+        r = r3; g = g3; b = b3;
+      }
+      px[i] = r*255; px[i+1] = g*255; px[i+2] = b*255;
+    }
+    ctx.putImageData(d, 0, 0);
+  }
+
+  /* Faqat joylashuv/filtrni yangilaydi (DOM'ni qayta qurmaydi) — sudrash va slayderlar
+     kuchsiz telefonlarda ham silliq ishlashi uchun. */
+  let applyRaf = 0;
+  function scheduleApply(){ if(applyRaf) return; applyRaf = requestAnimationFrame(() => { applyRaf = 0; applyView(); }); }
+  function applyView(){
+    if(!state.work || !paneImgs.length || !frame.w) return;
+    const L = layout(frame.w, frame.h);
+    state.view.px = L.px; state.view.py = L.py;
+    const filter = isDefaultAdj() ? '' : cssFilter();
+    paneImgs.forEach(({img, xCm, topCm}) => {
+      img.style.width = `${L.rw}px`;
+      img.style.height = `${L.rh}px`;
+      img.style.left = `${L.ox - xCm*frame.scale}px`;
+      img.style.top = `${L.oy - topCm*frame.scale}px`;
+      img.style.filter = filter;
+    });
+    updateEditorUi(L);
+  }
+
   function renderStage(){
     const stageWrap = $('constructorStageWrap');
     const artwork = $('constructorArtwork');
@@ -706,57 +893,49 @@ document.addEventListener("DOMContentLoaded",()=>{
     const shareBtn = $('constructorShareBtn');
     const downloadBtn = $('constructorDownloadBtn');
     const zoomBtn = $('constructorZoomBtn');
-    const ready = !!(state.imageSrc && state.imageObj && panes.length);
+    const ready = !!(state.imageSrc && state.work && panes.length);
     if(shareBtn) shareBtn.disabled = !ready;
     if(downloadBtn) downloadBtn.disabled = !ready;
     if(zoomBtn) zoomBtn.hidden = !ready;
+    $('constructorEditor').hidden = !ready;
 
-    if(!state.imageSrc || !panes.length || !state.imageObj){
+    paneImgs = [];
+    if(!ready){
       artwork.hidden = true;
       artwork.innerHTML = '';
+      artwork.classList.remove('editable');
       placeholder.hidden = false;
       return;
     }
 
     placeholder.hidden = true;
     artwork.hidden = false;
+    artwork.classList.add('editable');
     artwork.innerHTML = '';
 
     const maxPreviewW = Math.max(220, stageWrap.clientWidth - 44);
     const maxPreviewH = Math.max(180, stageWrap.clientHeight - 44);
     const pxPerCm = Math.min(maxPreviewW / totalW, maxPreviewH / maxH);
     const scale = Math.max(0.5, Math.min(4, pxPerCm));
+    frame = { w: totalW*scale, h: maxH*scale, scale };
 
-    artwork.style.width = `${totalW * scale}px`;
-    artwork.style.height = `${maxH * scale}px`;
-
-    // Rasm balandligi doim UMUMIY balandlik (maxH)ga nisbatan bitta marta
-    // hisoblanadi, har bir panel ichida emas -- aks holda panellarning
-    // bo'yi har xil bo'lganda (admin har biriga alohida o'lcham bergan
-    // holatlarda) rasm har panelda boshqa-boshqa balandlikda markazlashib,
-    // rasm yuklanganda dizayn panellar orasida "siljib" ko'rinar edi.
-    const imageScale = Math.max((totalW*scale)/state.imageObj.naturalWidth, (maxH*scale)/state.imageObj.naturalHeight);
-    const renderedW = state.imageObj.naturalWidth * imageScale;
-    const renderedH = state.imageObj.naturalHeight * imageScale;
-    const offsetX = ((totalW*scale) - renderedW) / 2;
-    const offsetY = ((maxH*scale) - renderedH) / 2;
+    artwork.style.width = `${frame.w}px`;
+    artwork.style.height = `${frame.h}px`;
 
     let xCm = 0;
     panes.forEach((p) => {
       const pane = document.createElement('div');
-      pane.className = 'constructor-pane';
+      pane.className = 'constructor-pane' + (state.view.fit === 'contain' ? ' contain' : '');
       pane.style.width = `${p.w * scale}px`;
       pane.style.height = `${p.h * scale}px`;
 
       const img = document.createElement('img');
       img.src = state.imageSrc;
       img.alt = '';
-
-      img.style.width = `${renderedW}px`;
-      img.style.height = `${renderedH}px`;
-      img.style.left = `${offsetX - xCm*scale}px`;
-      img.style.top = `${offsetY}px`;
+      img.draggable = false;
       pane.appendChild(img);
+      // Pane umumiy balandlikka nisbatan vertikal markazda turadi → rasm shu farqni hisobga oladi
+      paneImgs.push({ img, xCm, topCm: (maxH - p.h) / 2 });
 
       const glare = document.createElement('div');
       glare.className = 'constructor-pane-glare';
@@ -770,6 +949,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       artwork.appendChild(pane);
       xCm += p.w;
     });
+    applyView();
   }
 
   /* Sichqoncha bilan silliq 3D burilish (faqat pointer qurilmalarda
@@ -779,7 +959,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   const stageWrapEl = $('constructorStageWrap');
   stageWrapEl.addEventListener('mousemove', (e) => {
     const artwork = $('constructorArtwork');
-    if(!artwork || artwork.hidden) return;
+    if(!artwork || artwork.hidden || editDrag.active) return;
     const rect = stageWrapEl.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -870,8 +1050,8 @@ document.addEventListener("DOMContentLoaded",()=>{
         }
       }
 
-      state.imageSrc = dataUrl;
-      state.imageObj = img;
+      state.originalSrc = dataUrl;
+      await initWork(img);
       $('constructorDropText').textContent = file.name;
       renderStage();
       renderLimit();
@@ -910,7 +1090,7 @@ document.addEventListener("DOMContentLoaded",()=>{
      tasdiqlaydi (xuddi "Rasmiylashtirish" oqimidagi kabi). */
   async function buildFinalImageBlob(){
     const panes = getPanes();
-    if(!panes.length || !state.imageObj) return null;
+    if(!panes.length || !state.work) return null;
     const totalW = panes.reduce((s,p)=>s+p.w,0);
     const maxH = Math.max(...panes.map(p=>p.h));
     const PX_PER_CM = 12;
@@ -918,12 +1098,19 @@ document.addEventListener("DOMContentLoaded",()=>{
     canvas.width = Math.max(1, Math.round(totalW * PX_PER_CM));
     canvas.height = Math.max(1, Math.round(maxH * PX_PER_CM));
     const ctx = canvas.getContext('2d');
-    const imgScale = Math.max(canvas.width/state.imageObj.naturalWidth, canvas.height/state.imageObj.naturalHeight);
-    const renderedW = state.imageObj.naturalWidth * imgScale;
-    const renderedH = state.imageObj.naturalHeight * imgScale;
-    const offsetX = (canvas.width - renderedW) / 2;
-    const offsetY = (canvas.height - renderedH) / 2;
-    ctx.drawImage(state.imageObj, offsetX, offsetY, renderedW, renderedH);
+
+    // Rasm alohida qatlamda chiziladi, filtr faqat rasmga qo'llanadi (oq fon/ramkaga emas).
+    const L = layout(canvas.width, canvas.height);
+    const layer = document.createElement('canvas');
+    layer.width = canvas.width; layer.height = canvas.height;
+    const lctx = layer.getContext('2d');
+    lctx.imageSmoothingEnabled = true;
+    lctx.imageSmoothingQuality = 'high';
+    lctx.drawImage(state.work, L.ox, L.oy, L.rw, L.rh);
+    applyAdjustPixels(lctx, layer.width, layer.height);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(layer, 0, 0);
 
     // Panellar orasidagi ramka (mullion) chiziqlari -- shular bo'lmasa
     // "tayyor dizayn" rasmi asl yuklangan rasmdan hech farq qilmay,
@@ -991,7 +1178,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     const errBox = $('constructorShareError');
     errBox.textContent = '';
     const size = selectedSize();
-    if(!size || !state.imageSrc || !state.imageObj){
+    if(!size || !state.imageSrc || !state.work){
       errBox.textContent = "Avval o'lchamni tanlang va rasm yuklang.";
       return;
     }
@@ -1001,7 +1188,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     btn.textContent = 'Tayyorlanmoqda...';
     try{
       const finalBlob = await buildFinalImageBlob();
-      const { blob: originalBlob, mime: originalMime } = dataUrlToBlob(state.imageSrc);
+      const { blob: originalBlob, mime: originalMime } = dataUrlToBlob(state.originalSrc || state.imageSrc);
       if(!finalBlob) throw new Error("Tayyor rasmni hosil qilib bo'lmadi.");
 
       const formData = new FormData();
@@ -1052,7 +1239,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   /* Tayyor dizaynni bosib kattalashtirib ko'rish (zoom) */
   let zoomObjectUrl = null;
   async function openZoom(){
-    if(!state.imageSrc || !state.imageObj || !getPanes().length) return;
+    if(!state.imageSrc || !state.work || !getPanes().length) return;
     const img = $('constructorZoomImg');
     if(zoomObjectUrl){ URL.revokeObjectURL(zoomObjectUrl); zoomObjectUrl = null; }
     try{
@@ -1063,12 +1250,309 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
     if(typeof openModal === 'function') openModal('constructorZoomModal');
   }
-  $('constructorArtwork').addEventListener('click', openZoom);
-  $('constructorZoomBtn').addEventListener('click', (e) => { e.stopPropagation(); openZoom(); });
+    $('constructorZoomBtn').addEventListener('click', (e) => { e.stopPropagation(); openZoom(); });
   $('constructorZoomClose').addEventListener('click', () => {
     if(typeof closeModal === 'function') closeModal('constructorZoomModal');
   });
 
+
+  /* =====================  RASM TAHRIRLASH  ===================== */
+  const editDrag = { active: false };
+
+  function revokeSrc(){ if(state.imageSrc && state.imageSrc.startsWith('blob:')) URL.revokeObjectURL(state.imageSrc); }
+
+  /* Ishchi canvasni o'rnatadi va preview uchun blob URL tayyorlaydi. */
+  function setWork(canvas, keepView){
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        revokeSrc();
+        state.work = canvas;
+        state.imageObj = canvas;
+        state.imageSrc = blob ? URL.createObjectURL(blob) : canvas.toDataURL('image/jpeg', 0.92);
+        if(!keepView) state.view = { ...state.view, zoom: 1, px: 0, py: 0 };
+        renderStage();
+        resolve();
+      }, 'image/jpeg', 0.95);
+    });
+  }
+
+  /* Yuklangan rasmni (katta bo'lsa kichraytirib) ishchi canvasga o'tkazadi. */
+  async function initWork(img){
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const k = Math.min(1, MAX_WORK_SIDE / Math.max(iw, ih));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(iw*k)); c.height = Math.max(1, Math.round(ih*k));
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, c.width, c.height);   // shaffof PNG uchun oq fon
+    cx.imageSmoothingQuality = 'high';
+    cx.drawImage(img, 0, 0, c.width, c.height);
+    state.view = { zoom: 1, px: 0, py: 0, fit: 'cover' };
+    state.adj = { b: 100, c: 100, s: 100, gray: false, sepia: false };
+    syncEditorControls();
+    await setWork(c);
+  }
+
+  function transformWork(kind){
+    const src = state.work; if(!src) return;
+    const c = document.createElement('canvas'); const cx = c.getContext('2d');
+    if(kind === 'flip'){
+      c.width = src.width; c.height = src.height;
+      cx.translate(c.width, 0); cx.scale(-1, 1); cx.drawImage(src, 0, 0);
+    } else {
+      c.width = src.height; c.height = src.width;
+      if(kind === 'rotR'){ cx.translate(c.width, 0); cx.rotate(Math.PI/2); }
+      else { cx.translate(0, c.height); cx.rotate(-Math.PI/2); }
+      cx.drawImage(src, 0, 0);
+    }
+    setWork(c, kind === 'flip');
+  }
+
+  /* Rasm sifati: tanlangan ramkada 1 sm ga nechta piksel to'g'ri kelishi (taxminiy). */
+  function updateQuality(L){
+    const box = $('ceQuality'); if(!box) return;
+    const cmW = (L.rw / frame.w) * (frame.w / frame.scale);   // rasmning ramkadagi sm bo'yicha eni
+    const ppc = state.work.width / cmW;
+    let cls = '', t = "A'lo sifat";
+    if(ppc < 20){ cls = 'low'; t = 'Sifat past bo\'lishi mumkin'; }
+    else if(ppc < 40){ cls = 'mid'; t = "O'rtacha sifat"; }
+    box.className = 'ce-quality ' + cls;
+    box.innerHTML = `<i></i><span>${t}</span><small>≈ ${Math.round(ppc)} piksel/sm</small>`;
+  }
+
+  function updateEditorUi(L){
+    const z = Math.round(state.view.zoom*100);
+    $('ceZoomOut').textContent = z + '%';
+    $('ceBrightOut').textContent = signed(state.adj.b - 100);
+    $('ceContrastOut').textContent = signed(state.adj.c - 100);
+    $('ceSatOut').textContent = signed(state.adj.s - 100);
+    updateQuality(L);
+  }
+  function signed(n){ return (n > 0 ? '+' : '') + n; }
+
+  function syncEditorControls(){
+    $('ceZoom').value = Math.round(state.view.zoom*100);
+    $('ceBright').value = state.adj.b;
+    $('ceContrast').value = state.adj.c;
+    $('ceSat').value = state.adj.s;
+    document.querySelectorAll('#ceFit button').forEach(b => b.classList.toggle('active', b.dataset.fit === state.view.fit));
+    const fx = state.adj.gray ? 'gray' : state.adj.sepia ? 'sepia' : (state.adj.s >= 150 && state.adj.c >= 110) ? 'vivid' : 'none';
+    document.querySelectorAll('#ceChips .ce-chip').forEach(b => b.classList.toggle('active', b.dataset.fx === fx));
+  }
+
+  $('ceZoom').addEventListener('input', (e) => { state.view.zoom = Number(e.target.value)/100; scheduleApply(); });
+  $('ceBright').addEventListener('input', (e) => { state.adj.b = Number(e.target.value); syncChipsOnly(); scheduleApply(); });
+  $('ceContrast').addEventListener('input', (e) => { state.adj.c = Number(e.target.value); syncChipsOnly(); scheduleApply(); });
+  $('ceSat').addEventListener('input', (e) => { state.adj.s = Number(e.target.value); syncChipsOnly(); scheduleApply(); });
+  function syncChipsOnly(){
+    const fx = state.adj.gray ? 'gray' : state.adj.sepia ? 'sepia' : (state.adj.s >= 150 && state.adj.c >= 110) ? 'vivid' : 'none';
+    document.querySelectorAll('#ceChips .ce-chip').forEach(b => b.classList.toggle('active', b.dataset.fx === fx));
+  }
+
+  $('ceChips').addEventListener('click', (e) => {
+    const b = e.target.closest('.ce-chip'); if(!b) return;
+    const fx = b.dataset.fx;
+    state.adj.gray = fx === 'gray';
+    state.adj.sepia = fx === 'sepia';
+    if(fx === 'vivid'){ state.adj.s = 160; state.adj.c = 115; state.adj.b = 105; }
+    else if(fx === 'none'){ state.adj = { b: 100, c: 100, s: 100, gray: false, sepia: false }; }
+    syncEditorControls(); scheduleApply();
+  });
+
+  $('ceFit').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if(!b) return;
+    state.view.fit = b.dataset.fit;
+    state.view.px = 0; state.view.py = 0;
+    syncEditorControls();
+    renderStage();
+  });
+
+  $('ceCenter').addEventListener('click', () => { state.view.px = 0; state.view.py = 0; scheduleApply(); });
+  $('ceRotL').addEventListener('click', () => transformWork('rotL'));
+  $('ceRotR').addEventListener('click', () => transformWork('rotR'));
+  $('ceFlip').addEventListener('click', () => transformWork('flip'));
+  $('ceReset').addEventListener('click', async () => {
+    if(!state.originalSrc) return;
+    try{
+      const img = await loadImage(state.originalSrc);
+      await initWork(img);
+      if(typeof showToast === 'function') showToast("Rasm asl holiga qaytarildi.");
+    }catch(e){ /* e'tiborsiz */ }
+  });
+
+  /* ---- Ramka ichida sudrash (pan) + g'ildirak / ikki barmoq bilan masshtab ---- */
+  const artworkEl = $('constructorArtwork');
+  const pointers = new Map();
+  let dragStart = null, pinchStart = null;
+
+  function setZoom(z){
+    state.view.zoom = Math.max(1, Math.min(4, z));
+    $('ceZoom').value = Math.round(state.view.zoom*100);
+    scheduleApply();
+  }
+
+  artworkEl.addEventListener('pointerdown', (e) => {
+    if(!state.work || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    artworkEl.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if(pointers.size === 1){
+      dragStart = { x: e.clientX, y: e.clientY, px: state.view.px, py: state.view.py, moved: false };
+    } else if(pointers.size === 2){
+      const [a, b] = [...pointers.values()];
+      pinchStart = { dist: Math.hypot(a.x-b.x, a.y-b.y), zoom: state.view.zoom };
+      if(dragStart) dragStart.moved = true;
+    }
+  });
+  artworkEl.addEventListener('pointermove', (e) => {
+    if(!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if(pointers.size >= 2 && pinchStart){
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a.x-b.x, a.y-b.y);
+      if(pinchStart.dist > 0) setZoom(pinchStart.zoom * d / pinchStart.dist);
+      return;
+    }
+    if(!dragStart) return;
+    const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
+    if(!dragStart.moved && Math.hypot(dx, dy) < 5) return;
+    dragStart.moved = true;
+    editDrag.active = true;
+    artworkEl.classList.add('dragging');
+    artworkEl.style.transform = 'rotateX(0deg) rotateY(0deg)';
+    state.view.px = dragStart.px + dx / frame.w;
+    state.view.py = dragStart.py + dy / frame.h;
+    scheduleApply();
+  });
+  function endPointer(e){
+    if(!pointers.has(e.pointerId)) return;
+    pointers.delete(e.pointerId);
+    if(pointers.size < 2) pinchStart = null;
+    if(pointers.size === 0){
+      const wasTap = dragStart && !dragStart.moved && e.type === 'pointerup';
+      dragStart = null;
+      editDrag.active = false;
+      artworkEl.classList.remove('dragging');
+      if(wasTap) openZoom();      // qisqa bosish = kattalashtirib ko'rish
+    }
+  }
+  artworkEl.addEventListener('pointerup', endPointer);
+  artworkEl.addEventListener('pointercancel', endPointer);
+  artworkEl.addEventListener('wheel', (e) => {
+    if(!state.work) return;
+    e.preventDefault();
+    setZoom(state.view.zoom * (e.deltaY < 0 ? 1.08 : 1/1.08));
+  }, { passive: false });
+
+  /* ---- Kesish (crop) oynasi ---- */
+  const crop = { box: { x: 0, y: 0, w: 0, h: 0 }, ratio: null, W: 0, H: 0, drag: null };
+  const MIN_CROP = 24;
+  const cropImg = $('ceCropImg'), cropBox = $('ceCropBox'), cropStage = $('ceCropStage');
+
+  function paintCrop(){
+    const b = crop.box;
+    cropBox.style.left = b.x + 'px'; cropBox.style.top = b.y + 'px';
+    cropBox.style.width = b.w + 'px'; cropBox.style.height = b.h + 'px';
+    const k = state.work.width / crop.W;
+    $('ceCropInfo').textContent = `${Math.round(b.w*k)} × ${Math.round(b.h*k)} piksel`;
+  }
+  function fitRatioBox(r){
+    // markazda, rasm ichiga sig'adigan eng katta (90%) to'rtburchak
+    let w = crop.W*0.9, h = w / r;
+    if(h > crop.H*0.9){ h = crop.H*0.9; w = h * r; }
+    crop.box = { x: (crop.W-w)/2, y: (crop.H-h)/2, w, h };
+  }
+  function frameRatio(){
+    const panes = getPanes(); if(!panes.length) return null;
+    const totalW = panes.reduce((s,p)=>s+p.w,0), maxH = Math.max(...panes.map(p=>p.h));
+    return totalW / maxH;
+  }
+  function setCropRatio(key){
+    document.querySelectorAll('#ceRatios .ce-chip').forEach(b => b.classList.toggle('active', b.dataset.r === key));
+    crop.ratio = key === 'free' ? null : key === 'frame' ? frameRatio() : Number(key);
+    cropBox.classList.toggle('locked', !!crop.ratio);
+    if(crop.ratio) fitRatioBox(crop.ratio);
+    paintCrop();
+  }
+  function openCrop(){
+    if(!state.work) return;
+    cropImg.onload = () => {
+      crop.W = cropImg.clientWidth; crop.H = cropImg.clientHeight;
+      crop.box = { x: crop.W*0.05, y: crop.H*0.05, w: crop.W*0.9, h: crop.H*0.9 };
+      setCropRatio('free');
+    };
+    cropImg.src = state.imageSrc;
+    if(typeof openModal === 'function') openModal('ceCropModal');
+    if(cropImg.complete && cropImg.naturalWidth) cropImg.onload();
+  }
+  function stagePoint(e){
+    const r = cropStage.getBoundingClientRect();
+    return { x: Math.max(0, Math.min(crop.W, e.clientX - r.left)), y: Math.max(0, Math.min(crop.H, e.clientY - r.top)) };
+  }
+  cropBox.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    cropBox.setPointerCapture(e.pointerId);
+    const h = e.target.dataset && e.target.dataset.h;
+    const p = stagePoint(e);
+    crop.drag = { mode: h || 'move', sx: p.x, sy: p.y, box: { ...crop.box } };
+  });
+  cropBox.addEventListener('pointermove', (e) => {
+    const d = crop.drag; if(!d) return;
+    const p = stagePoint(e), o = d.box, W = crop.W, H = crop.H;
+    if(d.mode === 'move'){
+      crop.box.x = Math.max(0, Math.min(W - o.w, o.x + (p.x - d.sx)));
+      crop.box.y = Math.max(0, Math.min(H - o.h, o.y + (p.y - d.sy)));
+    } else if(crop.ratio){
+      // faqat burchaklar: qarama-qarshi burchak qotib turadi
+      const ax = d.mode.includes('w') ? o.x + o.w : o.x;
+      const ay = d.mode.includes('n') ? o.y + o.h : o.y;
+      const maxW = d.mode.includes('w') ? ax : W - ax;
+      const maxH = d.mode.includes('n') ? ay : H - ay;
+      let w = Math.max(Math.abs(p.x - ax), Math.abs(p.y - ay) * crop.ratio);
+      w = Math.max(MIN_CROP, Math.min(w, maxW, maxH * crop.ratio));
+      const h = w / crop.ratio;
+      crop.box = { x: d.mode.includes('w') ? ax - w : ax, y: d.mode.includes('n') ? ay - h : ay, w, h };
+    } else {
+      let { x, y, w, h } = o;
+      const right = o.x + o.w, bottom = o.y + o.h;
+      if(d.mode.includes('w')){ x = Math.max(0, Math.min(p.x, right - MIN_CROP)); w = right - x; }
+      if(d.mode.includes('e')){ w = Math.max(MIN_CROP, Math.min(p.x - o.x, W - o.x)); }
+      if(d.mode.includes('n')){ y = Math.max(0, Math.min(p.y, bottom - MIN_CROP)); h = bottom - y; }
+      if(d.mode.includes('s')){ h = Math.max(MIN_CROP, Math.min(p.y - o.y, H - o.y)); }
+      crop.box = { x, y, w, h };
+    }
+    paintCrop();
+  });
+  const endCrop = () => { crop.drag = null; };
+  cropBox.addEventListener('pointerup', endCrop);
+  cropBox.addEventListener('pointercancel', endCrop);
+
+  $('ceRatios').addEventListener('click', (e) => { const b = e.target.closest('.ce-chip'); if(b) setCropRatio(b.dataset.r); });
+  $('ceCropBtn').addEventListener('click', openCrop);
+  const closeCrop = () => { if(typeof closeModal === 'function') closeModal('ceCropModal'); };
+  $('ceCropClose').addEventListener('click', closeCrop);
+  $('ceCropCancel').addEventListener('click', closeCrop);
+  $('ceCropApply').addEventListener('click', async () => {
+    const k = state.work.width / crop.W, b = crop.box;
+    const sx = Math.round(b.x*k), sy = Math.round(b.y*k);
+    const sw = Math.max(1, Math.min(state.work.width - sx, Math.round(b.w*k)));
+    const sh = Math.max(1, Math.min(state.work.height - sy, Math.round(b.h*k)));
+    const c = document.createElement('canvas'); c.width = sw; c.height = sh;
+    c.getContext('2d').drawImage(state.work, sx, sy, sw, sh, 0, 0, sw, sh);
+    closeCrop();
+    await setWork(c);
+  });
+
+
+  /* Telefonda tahrirlash vositalari ko'rinish (preview) ostida turadi — slayderni
+     surganda natija bir ekranda ko'rinib turishi uchun. */
+  const mqMobile = window.matchMedia('(max-width: 860px)');
+  function placeEditor(){
+    const ed = $('constructorEditor');
+    const host = mqMobile.matches ? $('constructorShareError').parentNode : document.querySelector('.constructor-panel');
+    if(mqMobile.matches){ if(ed.parentNode !== host) host.appendChild(ed); }
+    else { const left = document.querySelector('.constructor-grid .constructor-panel'); if(ed.parentNode !== left) left.appendChild(ed); }
+  }
+  mqMobile.addEventListener('change', placeEditor);
+  placeEditor();
   window.addEventListener('resize', renderStage);
 
   async function loadSizes(){
