@@ -14,6 +14,10 @@ QO'LDA o'chiriladi):
     - Yangiliklar (NewsPost)
     - Xavfsizlik jurnali (SecurityEvent)
     - Mahsulotlar va ularning rasmlari, mijozlar, konstruktor o'lchamlari
+    - Yangiliklarning rasmlari (uploads/news/), izohlari va like'lari
+
+Konstruktor rasmlarini admin panelning \"Konstruktor\" bo'limidan ham QO'LDA
+ko'rib, belgilab o'chirish mumkin (muddati o'tishini kutish shart emas).
 
 Tozalash "yosh bo'yicha" ishlaydi: har bir fayl o'z yaratilgan vaqtidan
 boshlab hisoblanadi. Shu sabab server qayta ishga tushsa yoki VPS'da kod

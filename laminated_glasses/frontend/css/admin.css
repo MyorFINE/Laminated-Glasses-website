@@ -1656,3 +1656,303 @@ body.no-scroll {
 /* hidden atributi .btn ning display qiymati tufayli e'tiborsiz qolmasin */
 .btn[hidden] { display: none; }
 #staffOnlyBtn[aria-pressed="true"] { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+/* =========================================================
+   Yangiliklar (admin): forma, ro'yxat, izohlar
+   ========================================================= */
+
+.admin-modal-overlay.news-overlay {
+  z-index: 1000;
+  align-items: center;
+  padding: 24px;
+}
+
+.admin-modal.admin-modal-wide {
+  max-width: 760px;
+  max-height: 92vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+}
+
+.news-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.news-modal-head h3 {
+  margin: 0 0 4px;
+}
+
+.news-modal-head .sub {
+  margin: 0;
+  color: var(--navy-soft);
+  font-size: 0.84rem;
+}
+
+.news-image-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--ice);
+}
+
+.news-image-box img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.news-image-box img[hidden] {
+  display: none;
+}
+
+.news-image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.news-image-pick {
+  cursor: pointer;
+}
+
+.news-image-hint {
+  color: var(--navy-soft);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.news-check {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 16px 0;
+  color: var(--navy);
+  font-size: 0.9rem;
+}
+
+.news-check input {
+  width: auto;
+}
+
+.news-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.news-row:last-child {
+  border-bottom: 0;
+}
+
+.news-row-thumb {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--ice);
+}
+
+.news-row-thumb-empty {
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+}
+
+.news-row-main {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.news-row-main strong {
+  color: var(--navy);
+  overflow-wrap: anywhere;
+}
+
+.news-row-main .sub {
+  color: var(--navy-soft);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.news-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.news-comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.news-comment-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--ice);
+}
+
+.news-comment-row.is-reply {
+  margin-left: 22px;
+  border-left: 3px solid var(--sky);
+}
+
+.news-comment-main {
+  min-width: 0;
+  color: var(--navy);
+}
+
+.news-comment-main .sub {
+  color: var(--navy-soft);
+  font-size: 0.78rem;
+}
+
+.news-comment-main p {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+/* =========================================================
+   Konstruktor: foydalanuvchilar yuklagan rasmlar
+   ========================================================= */
+
+.ctor-uploads-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.ctor-uploads-head h3 {
+  font-family: var(--font-head);
+  font-size: 1.05rem;
+  margin: 0 0 4px;
+  color: var(--navy);
+}
+
+.ctor-uploads-head .sub {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--navy-soft);
+}
+
+.ctor-uploads-tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ctor-uploads-tools .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ctor-danger-ghost {
+  color: #b3413f;
+  border-color: rgba(179, 65, 63, 0.4);
+}
+
+.ctor-uploads-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  max-height: 560px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.ctor-uploads-grid .state-msg {
+  grid-column: 1 / -1;
+}
+
+.ctor-upload {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--ice);
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.ctor-upload:hover {
+  border-color: var(--sky);
+}
+
+.ctor-upload.selected {
+  border-color: #d1453c;
+  box-shadow: 0 0 0 3px rgba(209, 69, 60, 0.18);
+}
+
+.ctor-upload input[type="checkbox"] {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
+  accent-color: #d1453c;
+  cursor: pointer;
+}
+
+.ctor-upload-img {
+  display: block;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--ice-2);
+}
+
+.ctor-upload-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ctor-upload-meta {
+  font-size: 0.74rem;
+  color: var(--navy-soft);
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .admin-modal-overlay.news-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .admin-modal.admin-modal-wide {
+    max-height: 94vh;
+    border-radius: 20px 20px 0 0;
+  }
+  .ctor-uploads-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}
+

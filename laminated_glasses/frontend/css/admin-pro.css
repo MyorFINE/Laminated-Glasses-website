@@ -297,3 +297,57 @@ body.admin-body[data-atheme="dark"] .order-filters button.active { background: l
 .sidebar-foot .btn .lo-ico { display: none; }
 .dash-shell.collapsed .sidebar-foot .btn .lo-ico { display: block; margin: 0 auto; }
 .login-card .brand-mark { display: block; margin: 0 auto 14px; }
+
+/* =========================================================
+   Tungi rejim tuzatishlari: o'zgaruvchisiz (qattiq kodlangan) och ranglar
+   ========================================================= */
+
+/* Baza holati: xotira chizig'i, jadvallar soni, tiklash ogohlantirishi */
+body.admin-body[data-atheme="dark"] .storage-bar-track { background: rgba(255, 255, 255, .1); }
+body.admin-body[data-atheme="dark"] .db-table-count-row { background: rgba(255, 255, 255, .05); border: 1px solid var(--line); color: var(--navy); }
+body.admin-body[data-atheme="dark"] .db-table-count-row strong { color: var(--navy); }
+body.admin-body[data-atheme="dark"] .db-status-card { background: var(--white); border-color: var(--line); }
+body.admin-body[data-atheme="dark"] .db-restore-warning { color: #f3c27a; background: rgba(224, 152, 58, .12); border-color: rgba(224, 152, 58, .35); }
+body.admin-body[data-atheme="dark"] .btn-danger { background: #c23d35; border-color: #c23d35; color: #fff; }
+body.admin-body[data-atheme="dark"] .btn-danger:hover:not(:disabled) { background: #d94b42; }
+
+/* Holat belgilari (pill) va qatorlar */
+body.admin-body[data-atheme="dark"] .pill-status.on { background: rgba(31, 157, 98, .18); color: #62d79a; }
+body.admin-body[data-atheme="dark"] .pill-status.off { background: rgba(210, 74, 58, .18); color: #ff9a8f; }
+body.admin-body[data-atheme="dark"] .pill-status.new { background: rgba(74, 163, 230, .18); color: #7cc4f5; }
+body.admin-body[data-atheme="dark"] .icon-btn.danger:hover { border-color: #ff8f8a; color: #ff8f8a; }
+body.admin-body[data-atheme="dark"] .field-error { color: #ff9a94; }
+body.admin-body[data-atheme="dark"] .settings-success,
+body.admin-body[data-atheme="dark"] .profit-preview strong,
+body.admin-body[data-atheme="dark"] .stat-card.profit strong { color: #62d79a; }
+body.admin-body[data-atheme="dark"] .profit-preview { background: rgba(255, 255, 255, .05); }
+body.admin-body[data-atheme="dark"] .image-drop { border-color: var(--line-strong); background: rgba(255, 255, 255, .03); }
+
+/* Xavfsizlik bo'limi */
+body.admin-body[data-atheme="dark"] .ip-msg-status.active { background: rgba(74, 163, 230, .16); color: #7cc4f5; }
+body.admin-body[data-atheme="dark"] .ip-block-status.online { color: #62d79a; }
+body.admin-body[data-atheme="dark"] .ip-block-status.offline i { background: #5d7388; }
+body.admin-body[data-atheme="dark"] .ip-event-sample { color: #f0b868; }
+body.admin-body[data-atheme="dark"] .sec-item.ok .sec-dot { background: rgba(31, 157, 98, .2); color: #62d79a; }
+body.admin-body[data-atheme="dark"] .sec-item.warn .sec-dot { background: rgba(224, 152, 58, .2); color: #f0b868; }
+
+/* Adminlar / izohlar */
+body.admin-body[data-atheme="dark"] .staff-tag { background: rgba(29, 155, 240, .2); color: #7cc4f5; }
+body.admin-body[data-atheme="dark"] #staffOnlyBtn[aria-pressed="true"] { background: var(--a-blue); border-color: var(--a-blue); color: #fff; }
+body.admin-body[data-atheme="dark"] .login-chip { background: rgba(74, 163, 230, .16); color: #7cc4f5; }
+
+/* Yangilik / konstruktor rasmlari bo'limlari */
+body.admin-body[data-atheme="dark"] .admin-modal.admin-modal-wide { background: var(--white); border-color: var(--line-strong); }
+body.admin-body[data-atheme="dark"] .news-image-box { background: rgba(255, 255, 255, .04); }
+body.admin-body[data-atheme="dark"] .news-comment-row,
+body.admin-body[data-atheme="dark"] .ctor-upload { background: rgba(255, 255, 255, .04); }
+body.admin-body[data-atheme="dark"] .ctor-danger-ghost { color: #ff9a94; border-color: rgba(255, 154, 148, .45); }
+
+/* admin.html dagi qattiq kodlangan inline ranglar */
+body.admin-body[data-atheme="dark"] [style*="color:#b3452f"] { color: #ff9a8f !important; }
+body.admin-body[data-atheme="dark"] [style*="color:#a3651f"] { color: #f0b868 !important; }
+body.admin-body[data-atheme="dark"] option { background: #0c1522; color: #e8f0f8; }
+body.admin-body[data-atheme="dark"] ::placeholder { color: #6f869c; }
+body.admin-body[data-atheme="dark"] input[type="file"]::file-selector-button { background: #1a2b42; color: #e8f0f8; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; padding: 6px 10px; }
+
+body.admin-body[data-atheme="dark"] .category-chip button { background: rgba(255, 255, 255, .12); color: var(--navy); }

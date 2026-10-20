@@ -295,6 +295,22 @@
           </table>
         </div>
       </div>
+
+      <div class="table-card ctor-uploads-card" style="padding:22px 24px;margin-top:20px;">
+        <div class="ctor-uploads-head">
+          <div>
+            <h3>Foydalanuvchilar yuklagan rasmlar</h3>
+            <p class="sub" id="ctorUploadsInfo">Yuklanmoqda...</p>
+          </div>
+          <div class="ctor-uploads-tools">
+            <button type="button" class="btn btn-ghost btn-sm" id="ctorUploadsRefresh">Yangilash</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="ctorUploadsSelectAll">Hammasini belgilash</button>
+            <button type="button" class="btn btn-danger btn-sm" id="ctorUploadsDeleteSel" disabled>Belgilanganlarni o'chirish</button>
+            <button type="button" class="btn btn-ghost btn-sm ctor-danger-ghost" id="ctorUploadsDeleteAll">Hammasini tozalash</button>
+          </div>
+        </div>
+        <div class="ctor-uploads-grid" id="ctorUploadsGrid"><p class="state-msg">Yuklanmoqda...</p></div>
+      </div>
     </section>
 
     <!-- ---- Stats view ---- -->
@@ -729,17 +745,42 @@
   </div>
 </div>
 
-<div class="admin-modal-overlay" id="newsFormOverlay" style="display:none;position:fixed;inset:0;z-index:1000;background:#071629a8;overflow:auto;padding:24px;align-items:center;justify-content:center">
- <div class="admin-modal" style="width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:28px">
-  <div class="dash-topbar"><div><h2 id="newsFormHeading">Yangi yangilik</h2><p class="sub">Yangilikni shu sahifada to‘ldiring va saqlang.</p></div><button type="button" class="btn btn-ghost" id="closeNewsFormBtn">✕</button></div>
+<div class="admin-modal-overlay news-overlay" id="newsFormOverlay">
+ <div class="admin-modal admin-modal-wide" role="dialog" aria-modal="true" aria-labelledby="newsFormHeading">
+  <div class="news-modal-head">
+   <div><h3 id="newsFormHeading">Yangi yangilik</h3><p class="sub">Yangilikni shu sahifada to‘ldiring va saqlang.</p></div>
+   <button type="button" class="btn btn-ghost btn-sm" id="closeNewsFormBtn" aria-label="Yopish">✕</button>
+  </div>
   <form id="newsForm"><input type="hidden" id="newsEditId" />
    <div class="field"><label for="newsTitle">Sarlavha *</label><input id="newsTitle" required minlength="2" maxlength="180" placeholder="Yangilik sarlavhasi" /></div>
-   <div class="field"><label for="newsExcerpt">Qisqa tavsif</label><textarea id="newsExcerpt" rows="3" placeholder="Qisqacha mazmun"></textarea></div>
-   <div class="field"><label for="newsBody">To‘liq matn *</label><textarea id="newsBody" rows="8" required placeholder="Yangilik matnini kiriting"></textarea></div>
-   <div class="field"><label for="newsImage">Rasm URL (ixtiyoriy)</label><input id="newsImage" type="url" placeholder="https://..." /></div>
-   <label style="display:flex;gap:10px;align-items:center;margin:16px 0"><input type="checkbox" id="newsPublished" checked style="width:auto"/> Saytda e’lon qilinsin</label>
+   <div class="field"><label for="newsExcerpt">Qisqa tavsif</label><textarea id="newsExcerpt" rows="3" maxlength="1000" placeholder="Qisqacha mazmun"></textarea></div>
+   <div class="field"><label for="newsBody">To‘liq matn *</label><textarea id="newsBody" rows="8" required maxlength="12000" placeholder="Yangilik matnini kiriting"></textarea></div>
+   <div class="field">
+    <label>Rasm (ixtiyoriy)</label>
+    <div class="news-image-box" id="newsImageBox">
+     <img id="newsImagePreview" alt="" hidden />
+     <div class="news-image-actions">
+      <label class="btn btn-ghost btn-sm news-image-pick" for="newsImageFile" id="newsImagePickLabel">Rasm tanlash</label>
+      <input type="file" id="newsImageFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden />
+      <button type="button" class="btn btn-ghost btn-sm" id="newsImageRemove" hidden>Rasmni olib tashlash</button>
+     </div>
+     <small class="news-image-hint" id="newsImageHint">JPG, PNG yoki WEBP, 8 MB gacha. Rasm serverga yuklanadi — havola kiritish shart emas.</small>
+    </div>
+    <input type="hidden" id="newsImage" />
+   </div>
+   <label class="news-check"><input type="checkbox" id="newsPublished" checked /> Saytda e’lon qilinsin</label>
    <div class="modal-actions"><button type="button" class="btn btn-ghost" id="cancelNewsFormBtn">Bekor qilish</button><button type="submit" class="btn btn-primary" id="saveNewsBtn">Yangilikni saqlash</button></div>
   </form>
+ </div>
+</div>
+
+<div class="admin-modal-overlay news-overlay" id="newsCommentsOverlay">
+ <div class="admin-modal admin-modal-wide" role="dialog" aria-modal="true" aria-labelledby="newsCommentsHeading">
+  <div class="news-modal-head">
+   <div><h3 id="newsCommentsHeading">Yangilik izohlari</h3><p class="sub" id="newsCommentsSub"></p></div>
+   <button type="button" class="btn btn-ghost btn-sm" id="closeNewsCommentsBtn" aria-label="Yopish">✕</button>
+  </div>
+  <div id="newsCommentsList" class="news-comments-list"><p class="state-msg">Yuklanmoqda...</p></div>
  </div>
 </div>
 

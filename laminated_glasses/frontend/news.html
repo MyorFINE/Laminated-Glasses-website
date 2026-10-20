@@ -13,8 +13,9 @@
 <link rel="stylesheet" href="/css/style.css" />
 <link rel="stylesheet" href="/css/dialogs.css" />
 <link rel="stylesheet" href="/css/theme.css" />
+<style>body[data-page="news"] > section:not(#yangiliklar){display:none}</style>
 </head>
-<body>
+<body data-page="news">
 
 <!-- Google orqali kirish oynasi. Sayt ochilganda EMAS, foydalanuvchi
      "Savatga" tugmasini bosganda (kirmagan bo'lsa) ochiladi. -->
@@ -359,14 +360,5 @@
 
 <script src="/js/dialogs.js"></script>
 <script src="/js/main.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded",()=>{
- const visible=['yangiliklar'];
- document.querySelectorAll("body > section").forEach(sec=>{if(!visible.includes(sec.id)) sec.style.display="none";});
- document.querySelectorAll("body > footer").forEach(f=>{});
-});
-</script></body>
+</body>
 </html>
-<script>
-document.addEventListener('DOMContentLoaded',async()=>{const grid=document.querySelector('#yangiliklar .news-grid');if(!grid)return;try{const r=await fetch('/api/news');if(!r.ok)return;const items=await r.json();if(!items.length){grid.innerHTML='<p>Hozircha yangiliklar mavjud emas.</p>';return;}grid.innerHTML=items.map(n=>`<article class="news-card">${n.image_url?`<img src="${String(n.image_url).replace(/"/g,'&quot;')}" alt="" style="width:100%;border-radius:12px;object-fit:cover;max-height:220px">`:''}<span class="news-date">${new Date(n.created_at).toLocaleDateString('uz-UZ')}</span><h3>${String(n.title).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</h3><p>${String(n.excerpt||n.body||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</p></article>`).join('');}catch(e){console.warn('Yangiliklarni yuklash imkonsiz',e);}});
-</script>

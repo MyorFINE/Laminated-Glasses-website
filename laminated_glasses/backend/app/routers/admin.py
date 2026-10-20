@@ -17,6 +17,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
@@ -806,30 +807,177 @@ class NewsPayload(BaseModel):
     image_url: Optional[str] = Field(default=None, max_length=500)
     is_published: bool = True
 
+    @field_validator("image_url")
+    @classmethod
+    def _check_image_url(cls, value):
+        """Rasm faqat serverga yuklangan (/uploads/news/...) yoki (eski
+        yangiliklardan qolgan) http(s) manzil bo'lishi mumkin."""
+        value = (value or "").strip()
+        if not value:
+            return None
+        if value.startswith(utils.NEWS_IMAGE_URL_PREFIX) and ".." not in value:
+            return value
+        if value.lower().startswith(("https://", "http://")):
+            return value
+        raise ValueError("Rasm manzili noto'g'ri.")
+
+
 class LinkPayload(BaseModel):
     value: str = Field(default="", max_length=500)
 
+
+def _news_out(post: models.NewsPost, likes: int = 0, comments: int = 0) -> dict:
+    return {
+        "id": post.id,
+        "title": post.title,
+        "excerpt": post.excerpt or "",
+        "body": post.body or "",
+        "image_url": post.image_url or None,
+        "is_published": int(post.is_published or 0),
+        "created_at": (post.created_at or datetime.utcnow()).isoformat() + "Z",
+        "updated_at": post.updated_at.isoformat() + "Z" if post.updated_at else None,
+        "like_count": int(likes),
+        "comment_count": int(comments),
+    }
+
+
 @router.get("/news")
 def admin_news(db: Session = Depends(get_db), _admin=Depends(security.get_current_admin)):
-    return db.query(models.NewsPost).order_by(models.NewsPost.created_at.desc()).all()
+    posts = db.query(models.NewsPost).order_by(models.NewsPost.created_at.desc(), models.NewsPost.id.desc()).all()
+    likes = dict(
+        db.query(models.NewsLike.news_id, func.count(models.NewsLike.id)).group_by(models.NewsLike.news_id).all()
+    )
+    comments = dict(
+        db.query(models.NewsComment.news_id, func.count(models.NewsComment.id))
+        .group_by(models.NewsComment.news_id)
+        .all()
+    )
+    return [_news_out(p, likes.get(p.id, 0), comments.get(p.id, 0)) for p in posts]
+
+
+@router.post("/news/upload-image")
+def upload_news_image(
+    image: UploadFile = File(...),
+    _admin=Depends(security.get_current_admin),
+):
+    """Admin yangilik uchun rasmni to'g'ridan-to'g'ri yuklaydi (URL
+    kiritish shart emas). Natija -- saqlangan rasmning manzili."""
+    return {"image_url": utils.save_news_image(image)}
+
 
 @router.post("/news", status_code=201)
 def create_news(payload: NewsPayload, db: Session = Depends(get_db), _admin=Depends(security.get_current_admin)):
     item = models.NewsPost(**payload.model_dump())
-    db.add(item); db.commit(); db.refresh(item); return item
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return _news_out(item)
+
 
 @router.put("/news/{news_id}")
 def update_news(news_id: int, payload: NewsPayload, db: Session = Depends(get_db), _admin=Depends(security.get_current_admin)):
     item = db.query(models.NewsPost).filter_by(id=news_id).first()
-    if not item: raise HTTPException(status_code=404, detail="Yangilik topilmadi")
-    for k,v in payload.model_dump().items(): setattr(item,k,v)
-    item.updated_at = datetime.utcnow(); db.commit(); db.refresh(item); return item
+    if not item:
+        raise HTTPException(status_code=404, detail="Yangilik topilmadi")
+    old_image = item.image_url
+    for k, v in payload.model_dump().items():
+        setattr(item, k, v)
+    item.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(item)
+    if old_image and old_image != item.image_url:
+        utils.delete_news_image(old_image)  # almashtirilgan/olib tashlangan rasm diskda qolib ketmasin
+    return _news_out(item)
+
 
 @router.delete("/news/{news_id}", status_code=204)
 def delete_news(news_id: int, db: Session = Depends(get_db), _admin=Depends(security.get_current_admin)):
     item = db.query(models.NewsPost).filter_by(id=news_id).first()
-    if not item: raise HTTPException(status_code=404, detail="Yangilik topilmadi")
-    db.delete(item); db.commit()
+    if not item:
+        raise HTTPException(status_code=404, detail="Yangilik topilmadi")
+    image = item.image_url
+    db.query(models.NewsComment).filter(models.NewsComment.news_id == news_id).delete(synchronize_session=False)
+    db.query(models.NewsLike).filter(models.NewsLike.news_id == news_id).delete(synchronize_session=False)
+    db.delete(item)
+    db.commit()
+    utils.delete_news_image(image)
+
+
+@router.get("/news/{news_id}/comments")
+def admin_news_comments(
+    news_id: int, db: Session = Depends(get_db), _admin=Depends(security.get_current_admin)
+):
+    """Bitta yangilikning barcha izohlari (admin moderatsiyasi uchun: kim
+    yozgani email bilan ko'rinadi)."""
+    C = models.NewsComment
+    rows = (
+        db.query(C, models.Customer)
+        .join(models.Customer, models.Customer.id == C.customer_id)
+        .filter(C.news_id == news_id)
+        .order_by(C.created_at.desc(), C.id.desc())
+        .all()
+    )
+    return [
+        {
+            "id": c.id,
+            "parent_id": c.parent_id,
+            "body": c.body,
+            "customer_name": u.name,
+            "customer_email": u.email,
+            "is_staff": bool(u.is_staff),
+            "created_at": (c.created_at or datetime.utcnow()).isoformat() + "Z",
+        }
+        for c, u in rows
+    ]
+
+
+@router.delete("/news-comments/{comment_id}", status_code=204)
+def admin_delete_news_comment(
+    comment_id: int, db: Session = Depends(get_db), _admin=Depends(security.get_current_admin)
+):
+    """Izohni (va unga yozilgan javoblarni) bazadan butunlay o'chiradi."""
+    comment = db.query(models.NewsComment).filter(models.NewsComment.id == comment_id).first()
+    if comment is None:
+        raise HTTPException(status_code=404, detail="Izoh topilmadi.")
+    db.query(models.NewsComment).filter(models.NewsComment.parent_id == comment.id).delete(
+        synchronize_session=False
+    )
+    db.delete(comment)
+    db.commit()
+
+
+# ---------- Konstruktor: foydalanuvchilar yuklagan rasmlarni boshqarish ----------
+
+
+class ConstructorUploadsDelete(BaseModel):
+    filenames: List[str] = Field(default_factory=list, max_length=2000)
+    delete_all: bool = False
+
+
+@router.get("/constructor/uploads")
+def list_constructor_uploads(_admin=Depends(security.get_current_admin)):
+    """Konstruktor orqali foydalanuvchilar yuklagan (hali tozalanmagan) rasmlar."""
+    items = utils.list_constructor_previews()
+    return {
+        "items": [{**it, "created_at": it["created_at"].isoformat() + "Z"} for it in items],
+        "total_count": len(items),
+        "total_size_kb": round(sum(it["size_kb"] for it in items), 1),
+        "auto_clean_hours": config.CONSTRUCTOR_LIMIT_HOURS,
+    }
+
+
+@router.post("/constructor/uploads/delete")
+def delete_constructor_uploads(
+    payload: ConstructorUploadsDelete, _admin=Depends(security.get_current_admin)
+):
+    """Admin belgilagan rasmlarni (yoki hammasini) diskdan o'chiradi."""
+    if payload.delete_all:
+        names = [it["filename"] for it in utils.list_constructor_previews()]
+    else:
+        names = payload.filenames
+    if not names:
+        raise HTTPException(status_code=400, detail="O'chirish uchun rasm tanlanmagan.")
+    return {"deleted": utils.delete_constructor_previews(names)}
 
 @router.get("/site-links")
 def admin_site_links(db: Session = Depends(get_db), _admin=Depends(security.get_current_admin)):

@@ -406,3 +406,8 @@ html[data-theme="dark"] .lgd-danger .lgd-btn-main:hover { background: #d4493b; }
 
 html[data-theme="dark"] input::placeholder,
 html[data-theme="dark"] textarea::placeholder { color: rgba(159, 184, 203, 0.65); }
+
+/* Yangiliklar kartalari (like/izoh tugmalari umumiy .like-btn/.comment-btn qoidalaridan oladi) */
+html[data-theme="dark"] .news-card .news-img { background: var(--ice-2); }
+html[data-theme="dark"] .news-more { color: var(--sky-deep); }
+

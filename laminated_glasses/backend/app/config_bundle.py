@@ -20,6 +20,9 @@ o'sha bo'lim xatosiz o'tkazib yuboriladi):
                                        kirish vaqti va h.k.)
     izohlar.db                     -- product_comments (mahsulot izohlari) +
                                        product_likes (like'lar)
+    yangiliklar.db                 -- news_posts (yangiliklar) + news_comments
+                                       (yangilik izohlari) + news_likes
+    yangilik_rasmlari/             -- yangiliklarga yuklangan rasmlar
 
 MUHIM: bular ALOHIDA, mustaqil SQLite fayllar -- asosiy
 `laminated_glasses.db` ning bo'lagi emas, balki undan ANIQ shu jadvallar
@@ -67,6 +70,7 @@ from .database import Base, engine
 SQLITE_MAGIC = b"SQLite format 3\x00"
 
 IMAGES_FOLDER_NAME = "tovar_rasmlari"
+NEWS_IMAGES_FOLDER_NAME = "yangilik_rasmlari"
 
 # Har bir bo'lim fayli -- ichidagi jadvallar. Bular importda "shu jadval
 # bo'lishi shart" ro'yxati sifatida ham ishlatiladi (bu kichik,
@@ -81,6 +85,9 @@ BUNDLE_TABLES: Dict[str, List[str]] = {
     # (foydalanuvchilar.db) ID'lariga bog'liq -- shu sababli ro'yxatning
     # OXIRIDA turadi: avval ular tiklanadi, so'ng izohlar.
     "izohlar.db": ["product_comments", "product_likes"],
+    # Yangiliklar va ularning izoh/like'lari (izohlar mijoz ID'lariga bog'liq --
+    # shu sabab bu ham foydalanuvchilar.db dan KEYIN tiklanadi).
+    "yangiliklar.db": ["news_posts", "news_comments", "news_likes"],
 }
 
 
@@ -126,9 +133,17 @@ def build_export_bundle(target_zip_path: Path) -> None:
             for filename, path in section_paths.items():
                 zf.write(path, arcname=filename)
             if config.UPLOADS_DIR.exists():
-                for img in config.UPLOADS_DIR.rglob("*"):
-                    if img.is_file():
+                # Mahsulot rasmlari: faqat uploads/ ning o'zidagi fayllar.
+                # (Ichki papkalar -- konstruktorning 24 soatlik vaqtinchalik
+                # rasmlari -- zipga kirmaydi: ular zaxiralanishi shart emas.)
+                for img in config.UPLOADS_DIR.iterdir():
+                    if img.is_file() and img.name != ".gitkeep":
                         zf.write(img, arcname=f"{IMAGES_FOLDER_NAME}/{img.name}")
+            news_dir = config.UPLOADS_DIR / "news"
+            if news_dir.exists():
+                for img in news_dir.iterdir():
+                    if img.is_file() and img.name != ".gitkeep":
+                        zf.write(img, arcname=f"{NEWS_IMAGES_FOLDER_NAME}/{img.name}")
     finally:
         tmp_full_copy.unlink(missing_ok=True)
         shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -197,22 +212,29 @@ def _columns(conn: sqlite3.Connection, schema: str, table: str) -> List[str]:
     return [row[1] for row in conn.execute(f"PRAGMA {schema}.table_info({table})")]
 
 
-_SOCIAL_TABLES = ("product_comments", "product_likes")
+# jadval -> (tashqi kalit ustuni, ota jadval)
+_SOCIAL_FK = {
+    "product_comments": ("product_id", "products"),
+    "product_likes": ("product_id", "products"),
+    "news_comments": ("news_id", "news_posts"),
+    "news_likes": ("news_id", "news_posts"),
+}
+_SOCIAL_TABLES = tuple(_SOCIAL_FK)
 
 
 def _purge_social_orphans(conn: sqlite3.Connection) -> None:
-    """Mahsulot yoki mijoz almashtirilgach (yoki izohlar boshqa holatdagi
-    zipdan kelgach), endi mavjud bo'lmagan mahsulot/mijozga tegishli "yetim"
-    izoh va like'larni o'chiradi -- aks holda ID'lar boshqa mahsulot/odamga
-    tegib, begona izoh noto'g'ri joyda ko'rinib qolishi mumkin edi."""
+    """Mahsulot, yangilik yoki mijoz almashtirilgach (yoki izohlar boshqa
+    holatdagi zipdan kelgach), endi mavjud bo'lmagan mahsulot/yangilik/mijozga
+    tegishli "yetim" izoh va like'larni o'chiradi -- aks holda ID'lar boshqa
+    mahsulot/odamga tegib, begona izoh noto'g'ri joyda ko'rinib qolishi mumkin edi."""
     existing = {
         row[0] for row in conn.execute("SELECT name FROM main.sqlite_master WHERE type='table'")
     }
-    for table in _SOCIAL_TABLES:
-        if table not in existing:
+    for table, (fk, parent) in _SOCIAL_FK.items():
+        if table not in existing or parent not in existing:
             continue
         conn.execute(
-            f"DELETE FROM {table} WHERE product_id NOT IN (SELECT id FROM products) "
+            f"DELETE FROM {table} WHERE {fk} NOT IN (SELECT id FROM {parent}) "
             f"OR customer_id NOT IN (SELECT id FROM customers)"
         )
 
@@ -251,7 +273,7 @@ def _merge_section(section_db_path: Path, tables: List[str]) -> None:
                 # Konstruktor limiti mijoz ID'siga bog'liq: ID'lar boshqa odamga
                 # tegib qolib, begona akkauntni bloklab qo'ymasligi uchun.
                 conn.execute("DELETE FROM constructor_usage")
-            if table in ("customers", "products") + _SOCIAL_TABLES:
+            if table in ("customers", "products", "news_posts") + _SOCIAL_TABLES:
                 _purge_social_orphans(conn)
         conn.commit()
         conn.execute("DETACH DATABASE part")
@@ -310,7 +332,12 @@ def import_config_bundle(uploaded_zip_path: Path) -> dict:
         if not has_images:
             skipped.append(IMAGES_FOLDER_NAME)
 
-        if not present_sections and not has_images:
+        news_images_dir = extract_dir / NEWS_IMAGES_FOLDER_NAME
+        has_news_images = news_images_dir.exists() and news_images_dir.is_dir()
+        if not has_news_images:
+            skipped.append(NEWS_IMAGES_FOLDER_NAME)
+
+        if not present_sections and not has_images and not has_news_images:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Zip ichida tanish bo'limlardan birortasi ham topilmadi.",
@@ -351,6 +378,14 @@ def import_config_bundle(uploaded_zip_path: Path) -> dict:
                 if img.is_file():
                     shutil.copyfile(img, config.UPLOADS_DIR / img.name)
             applied.append(IMAGES_FOLDER_NAME)
+
+        if has_news_images:
+            target = config.UPLOADS_DIR / "news"
+            target.mkdir(parents=True, exist_ok=True)
+            for img in news_images_dir.rglob("*"):
+                if img.is_file():
+                    shutil.copyfile(img, target / img.name)
+            applied.append(NEWS_IMAGES_FOLDER_NAME)
     finally:
         shutil.rmtree(extract_dir, ignore_errors=True)
 

@@ -945,9 +945,340 @@ def checkout(
         message_text=message_text,
     )
 
+# ---------- Yangiliklar: ro'yxat, like va izohlar ----------
+#
+# Qoidalar mahsulot like/izohlari bilan bir xil: o'qish hamma uchun ochiq,
+# like va izoh yozish faqat Google orqali kirgan mijoz uchun; izohda faqat ism
+# (+ Google rasm) chiqadi; egasi tahrirlaydi/o'chiradi; admin (is_staff) har
+# qanday izohni bazadan butunlay o'chira oladi va javob yoza oladi.
+
+
+def _published_news_or_404(db: Session, news_id: int) -> models.NewsPost:
+    post = (
+        db.query(models.NewsPost)
+        .filter(models.NewsPost.id == news_id, models.NewsPost.is_published == 1)
+        .first()
+    )
+    if post is None:
+        raise HTTPException(status_code=404, detail="Yangilik topilmadi.")
+    return post
+
+
+def _news_like_count(db: Session, news_id: int) -> int:
+    return (
+        db.query(func.count(models.NewsLike.id))
+        .filter(models.NewsLike.news_id == news_id)
+        .scalar()
+        or 0
+    )
+
+
+def _news_public(post: models.NewsPost, likes: int, comments: int, liked: bool) -> dict:
+    return {
+        "id": post.id,
+        "title": post.title,
+        "excerpt": post.excerpt or "",
+        "body": post.body or "",
+        "image_url": post.image_url or None,
+        "created_at": (post.created_at or datetime.utcnow()).isoformat() + "Z",
+        "like_count": int(likes),
+        "comment_count": int(comments),
+        "liked": bool(liked),
+    }
+
+
 @router.get("/news")
-def public_news(db: Session = Depends(get_db)):
-    return db.query(models.NewsPost).filter_by(is_published=1).order_by(models.NewsPost.created_at.desc()).all()
+def public_news(
+    db: Session = Depends(get_db),
+    customer: Optional[models.Customer] = Depends(security.get_optional_customer),
+):
+    posts = (
+        db.query(models.NewsPost)
+        .filter(models.NewsPost.is_published == 1)
+        .order_by(models.NewsPost.created_at.desc(), models.NewsPost.id.desc())
+        .all()
+    )
+    ids = [p.id for p in posts]
+    likes, comments, liked = {}, {}, set()
+    if ids:
+        likes = dict(
+            db.query(models.NewsLike.news_id, func.count(models.NewsLike.id))
+            .filter(models.NewsLike.news_id.in_(ids))
+            .group_by(models.NewsLike.news_id)
+            .all()
+        )
+        comments = dict(
+            db.query(models.NewsComment.news_id, func.count(models.NewsComment.id))
+            .join(models.Customer, models.Customer.id == models.NewsComment.customer_id)
+            .filter(models.NewsComment.news_id.in_(ids))
+            .group_by(models.NewsComment.news_id)
+            .all()
+        )
+        if customer is not None:
+            liked = {
+                row[0]
+                for row in db.query(models.NewsLike.news_id).filter(
+                    models.NewsLike.news_id.in_(ids),
+                    models.NewsLike.customer_id == customer.id,
+                )
+            }
+    return [
+        _news_public(p, likes.get(p.id, 0), comments.get(p.id, 0), p.id in liked)
+        for p in posts
+    ]
+
+
+@router.get("/news/{news_id}/social", response_model=schemas.ProductSocialOut)
+def news_social(
+    news_id: int,
+    db: Session = Depends(get_db),
+    customer: Optional[models.Customer] = Depends(security.get_optional_customer),
+):
+    """Yangilik izohlari oynasi ochilganda: like soni, shu mijoz like
+    bosganmi va (eng yangi COMMENT_LIST_LIMIT ta) izohlar + admin javoblari."""
+    _published_news_or_404(db, news_id)
+    C = models.NewsComment
+    roots = (
+        db.query(C, models.Customer)
+        .join(models.Customer, models.Customer.id == C.customer_id)
+        .filter(C.news_id == news_id, C.parent_id.is_(None))
+        .order_by(C.created_at.desc(), C.id.desc())
+        .limit(config.COMMENT_LIST_LIMIT)
+        .all()
+    )
+    root_ids = [c.id for c, _ in roots]
+    reply_rows = []
+    if root_ids:
+        reply_rows = (
+            db.query(C, models.Customer)
+            .join(models.Customer, models.Customer.id == C.customer_id)
+            .filter(C.parent_id.in_(root_ids))
+            .order_by(C.created_at.asc(), C.id.asc())
+            .all()
+        )
+    root_name = {c.id: author.name for c, author in roots}
+    replies_by_root = {}
+    for c, author in reply_rows:
+        replies_by_root.setdefault(c.parent_id, []).append(
+            _comment_out(c, author, customer, reply_to=root_name.get(c.parent_id))
+        )
+    comments_out = []
+    for c, author in roots:
+        item = _comment_out(c, author, customer)
+        item.replies = replies_by_root.get(c.id, [])
+        comments_out.append(item)
+    total = (
+        db.query(func.count(C.id))
+        .join(models.Customer, models.Customer.id == C.customer_id)
+        .filter(C.news_id == news_id)
+        .scalar()
+        or 0
+    )
+    liked = False
+    mine = 0
+    if customer is not None:
+        liked = (
+            db.query(models.NewsLike.id)
+            .filter(models.NewsLike.news_id == news_id, models.NewsLike.customer_id == customer.id)
+            .first()
+            is not None
+        )
+        mine = (
+            db.query(func.count(C.id))
+            .filter(C.news_id == news_id, C.customer_id == customer.id)
+            .scalar()
+            or 0
+        )
+    return schemas.ProductSocialOut(
+        like_count=_news_like_count(db, news_id),
+        liked=liked,
+        comment_count=int(total),
+        comments=comments_out,
+        my_comment_count=int(mine),
+        comment_limit=config.COMMENT_MAX_PER_USER_PER_PRODUCT,
+        comment_max_length=(
+            config.COMMENT_STAFF_MAX_LENGTH
+            if customer is not None and customer.is_staff
+            else config.COMMENT_MAX_LENGTH
+        ),
+        comment_max_edits=config.COMMENT_MAX_EDITS,
+        can_moderate=bool(customer is not None and customer.is_staff),
+    )
+
+
+@router.put("/news/{news_id}/like", response_model=schemas.LikeOut)
+def like_news(
+    news_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    customer: models.Customer = Depends(security.get_current_customer),
+):
+    security.enforce_rate_limit(request, "news_like", max_calls=90, window_seconds=300)
+    _published_news_or_404(db, news_id)
+    exists = (
+        db.query(models.NewsLike.id)
+        .filter(models.NewsLike.news_id == news_id, models.NewsLike.customer_id == customer.id)
+        .first()
+    )
+    if exists is None:
+        db.add(models.NewsLike(news_id=news_id, customer_id=customer.id))
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()  # parallel so'rov allaqachon yozgan -- natija bir xil
+    return schemas.LikeOut(liked=True, like_count=_news_like_count(db, news_id))
+
+
+@router.delete("/news/{news_id}/like", response_model=schemas.LikeOut)
+def unlike_news(
+    news_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    customer: models.Customer = Depends(security.get_current_customer),
+):
+    security.enforce_rate_limit(request, "news_like", max_calls=90, window_seconds=300)
+    db.query(models.NewsLike).filter(
+        models.NewsLike.news_id == news_id,
+        models.NewsLike.customer_id == customer.id,
+    ).delete(synchronize_session=False)
+    db.commit()
+    return schemas.LikeOut(liked=False, like_count=_news_like_count(db, news_id))
+
+
+@router.post("/news/{news_id}/comments", response_model=schemas.CommentOut, status_code=201)
+def add_news_comment(
+    news_id: int,
+    payload: schemas.CommentIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    customer: models.Customer = Depends(security.get_current_customer),
+):
+    """Yangilikka izoh yozadi (mahsulotdagi kabi: bitta akkaunt bitta yangilikka
+    COMMENT_MAX_PER_USER_PER_PRODUCT tagacha, matn COMMENT_MAX_LENGTH belgigacha)."""
+    is_staff = bool(customer.is_staff)
+    if payload.reply_to_id is not None and not is_staff:
+        raise HTTPException(status_code=403, detail="Izohga javob yozish faqat adminlar uchun.")
+    if not is_staff:
+        security.enforce_rate_limit(request, "news_comment", max_calls=20, window_seconds=600)
+    _published_news_or_404(db, news_id)
+    _reject_unsafe_comment(request, db, payload.body)
+    try:
+        body = utils.clean_comment_text(
+            payload.body, max_length=config.COMMENT_STAFF_MAX_LENGTH if is_staff else None
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    C = models.NewsComment
+    parent = None
+    reply_to_name = None
+    if payload.reply_to_id is not None:
+        target = db.query(C).filter(C.id == payload.reply_to_id, C.news_id == news_id).first()
+        if target is not None and target.parent_id is not None:
+            target = db.query(C).filter(C.id == target.parent_id).first()
+        if target is None:
+            raise HTTPException(status_code=404, detail="Javob beriladigan izoh topilmadi (o'chirilgan bo'lishi mumkin).")
+        parent = target
+        owner = db.query(models.Customer).filter(models.Customer.id == parent.customer_id).first()
+        reply_to_name = owner.name if owner is not None else None
+
+    with _comment_lock:
+        mine = (
+            db.query(func.count(C.id))
+            .filter(C.news_id == news_id, C.customer_id == customer.id)
+            .scalar()
+            or 0
+        )
+        if not is_staff and mine >= config.COMMENT_MAX_PER_USER_PER_PRODUCT:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Bu yangilikka {config.COMMENT_MAX_PER_USER_PER_PRODUCT} tagacha izoh "
+                    "yozish mumkin. Eski izohingizni o'chirib yoki tahrirlab ko'ring."
+                ),
+            )
+        comment = C(
+            news_id=news_id,
+            customer_id=customer.id,
+            body=body,
+            parent_id=parent.id if parent is not None else None,
+        )
+        db.add(comment)
+        db.commit()
+        db.refresh(comment)
+    return _comment_out(comment, customer, customer, reply_to=reply_to_name)
+
+
+def _own_news_comment_or_404(db: Session, comment_id: int, customer: models.Customer) -> models.NewsComment:
+    comment = (
+        db.query(models.NewsComment)
+        .filter(models.NewsComment.id == comment_id, models.NewsComment.customer_id == customer.id)
+        .first()
+    )
+    if comment is None:
+        raise HTTPException(status_code=404, detail="Izoh topilmadi.")
+    return comment
+
+
+@router.put("/news-comments/{comment_id}", response_model=schemas.CommentOut)
+def edit_news_comment(
+    comment_id: int,
+    payload: schemas.CommentIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    customer: models.Customer = Depends(security.get_current_customer),
+):
+    is_staff = bool(customer.is_staff)
+    if not is_staff:
+        security.enforce_rate_limit(request, "news_comment", max_calls=20, window_seconds=600)
+    _reject_unsafe_comment(request, db, payload.body)
+    try:
+        new_body = utils.clean_comment_text(
+            payload.body, max_length=config.COMMENT_STAFF_MAX_LENGTH if is_staff else None
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    with _comment_lock:
+        comment = _own_news_comment_or_404(db, comment_id, customer)
+        if new_body != comment.body:
+            used = int(comment.edit_count or 0)
+            if not is_staff and used >= config.COMMENT_MAX_EDITS:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"Bu izohni {config.COMMENT_MAX_EDITS} martadan ortiq tahrirlab bo'lmaydi. "
+                        "Xohlasangiz o'chirib, yangisini yozing."
+                    ),
+                )
+            comment.body = new_body
+            comment.edit_count = used + 1
+            comment.edited_at = datetime.utcnow()
+            db.commit()
+            db.refresh(comment)
+    return _comment_out(comment, customer, customer)
+
+
+@router.delete("/news-comments/{comment_id}", status_code=204)
+def delete_news_comment(
+    comment_id: int,
+    db: Session = Depends(get_db),
+    customer: models.Customer = Depends(security.get_current_customer),
+):
+    """Oddiy foydalanuvchi faqat o'z izohini, admin esa HAR QANDAY izohni
+    o'chiradi -- bazadan butunlay; unga yozilgan javoblar ham o'chadi."""
+    if customer.is_staff:
+        comment = db.query(models.NewsComment).filter(models.NewsComment.id == comment_id).first()
+        if comment is None:
+            raise HTTPException(status_code=404, detail="Izoh topilmadi.")
+    else:
+        comment = _own_news_comment_or_404(db, comment_id, customer)
+    db.query(models.NewsComment).filter(models.NewsComment.parent_id == comment.id).delete(
+        synchronize_session=False
+    )
+    db.delete(comment)
+    db.commit()
+    return None
 
 @router.get("/site-links")
 def public_site_links(db: Session = Depends(get_db)):

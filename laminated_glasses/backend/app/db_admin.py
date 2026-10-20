@@ -54,6 +54,8 @@ _TABLE_LABELS = [
     (models.ConstructorSize, "Konstruktor o'lchamlari"),
     (models.ProductComment, "Mahsulot izohlari"),
     (models.ProductLike, "Mahsulot like'lari"),
+    (models.NewsComment, "Yangilik izohlari"),
+    (models.NewsLike, "Yangilik like'lari"),
     (models.SecurityEvent, "Xavfsizlik jurnali yozuvlari"),
 ]
 

@@ -415,3 +415,37 @@ class ProductComment(Base):
     # Admin javobi bo'lsa -- javob berilgan (asosiy) izohning id'si. Oddiy izohlarda NULL.
     # Javoblar faqat bitta daraja: asosiy izoh -> uning javoblari.
     parent_id = Column(Integer, nullable=True, index=True)
+
+
+class NewsLike(Base):
+    """Yangilikka bosilgan \"yurakcha\". Bitta Google akkaunt bitta yangilikka
+    faqat BITTA like bosa oladi (unique) -- qayta bosilsa, like olib tashlanadi.
+    Faqat Google orqali kirgan mijoz bosa oladi."""
+
+    __tablename__ = "news_likes"
+    __table_args__ = (
+        UniqueConstraint("news_id", "customer_id", name="uq_news_like_customer"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    news_id = Column(Integer, ForeignKey("news_posts.id"), nullable=False, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class NewsComment(Base):
+    """Yangilikka yozilgan izoh (ProductComment bilan bir xil qoidalar:
+    faqat Google orqali kirgan mijoz yozadi, ommaviy javobda faqat ism va matn,
+    egasi tahrirlaydi/o'chiradi, admin har qanday izohni o'chira oladi va unga
+    javob yoza oladi). Yangilik o'chirilganda uning izohlari ham o'chadi."""
+
+    __tablename__ = "news_comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    news_id = Column(Integer, ForeignKey("news_posts.id"), nullable=False, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    body = Column(String(500), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    edited_at = Column(DateTime, nullable=True)
+    edit_count = Column(Integer, nullable=False, default=0, server_default="0")
+    parent_id = Column(Integer, nullable=True, index=True)

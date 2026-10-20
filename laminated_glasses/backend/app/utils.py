@@ -111,6 +111,95 @@ def build_constructor_preview_url(filename: Optional[str]) -> Optional[str]:
     return f"/uploads/{CONSTRUCTOR_PREVIEWS_SUBDIR}/{filename}"
 
 
+NEWS_IMAGES_SUBDIR = "news"
+NEWS_IMAGES_DIR = config.UPLOADS_DIR / NEWS_IMAGES_SUBDIR
+NEWS_IMAGES_DIR.mkdir(exist_ok=True)
+NEWS_IMAGE_URL_PREFIX = f"/uploads/{NEWS_IMAGES_SUBDIR}/"
+
+
+def save_news_image(file: UploadFile) -> str:
+    """Yangilik rasmini uploads/news/ papkasiga saqlaydi va brauzer uchun
+    nisbiy URL (/uploads/news/<fayl>) qaytaradi. Alohida papka: konstruktorning
+    24 soatlik tozalashi va mahsulot rasmlari bilan aralashmaydi."""
+    suffix = _validate_image(file)
+    max_bytes = config.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    contents = file.file.read(max_bytes + 1)  # xotira himoyasi -- save_product_image dagi izohga qarang
+    if len(contents) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Rasm hajmi {config.MAX_UPLOAD_SIZE_MB}MB dan katta bo'lmasligi kerak.",
+        )
+    if not contents:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Rasm fayli bo'sh.")
+    NEWS_IMAGES_DIR.mkdir(exist_ok=True)
+    filename = f"{uuid.uuid4().hex}{suffix}"
+    with open(NEWS_IMAGES_DIR / filename, "wb") as f:
+        f.write(contents)
+    return f"{NEWS_IMAGE_URL_PREFIX}{filename}"
+
+
+def delete_news_image(url: Optional[str]) -> None:
+    """Faqat serverning o'z yangilik rasmini (/uploads/news/...) o'chiradi;
+    tashqi (http...) havolalarga tegmaydi. Yo'l-traversal himoyalangan."""
+    if not url or not str(url).startswith(NEWS_IMAGE_URL_PREFIX):
+        return
+    name = Path(str(url)[len(NEWS_IMAGE_URL_PREFIX):]).name
+    if not name:
+        return
+    path = NEWS_IMAGES_DIR / name
+    try:
+        if path.is_file():
+            path.unlink()
+    except OSError:
+        pass
+
+
+def list_constructor_previews() -> List[dict]:
+    """Konstruktor orqali yuklangan vaqtinchalik rasmlar (admin ko'rishi va
+    qo'lda tozalashi uchun). Eng yangisi birinchi."""
+    out: List[dict] = []
+    if not CONSTRUCTOR_PREVIEWS_DIR.exists():
+        return out
+    now = datetime.utcnow().timestamp()
+    for path in CONSTRUCTOR_PREVIEWS_DIR.iterdir():
+        try:
+            if not path.is_file() or path.suffix.lower() not in config.ALLOWED_IMAGE_EXTENSIONS:
+                continue
+            st = path.stat()
+        except OSError:
+            continue
+        out.append(
+            {
+                "filename": path.name,
+                "url": build_constructor_preview_url(path.name),
+                "size_kb": round(st.st_size / 1024, 1),
+                "created_at": datetime.utcfromtimestamp(st.st_mtime),
+                "age_hours": round(max(0.0, now - st.st_mtime) / 3600, 1),
+            }
+        )
+    out.sort(key=lambda x: x["created_at"], reverse=True)
+    return out
+
+
+def delete_constructor_previews(filenames: List[str]) -> int:
+    """Berilgan fayl nomlarini o'chiradi (faqat constructor_previews ichidan;
+    yo'l-traversal urinishlari e'tiborsiz qoldiriladi). O'chirilganlar sonini
+    qaytaradi."""
+    removed = 0
+    for raw in filenames:
+        name = Path(str(raw)).name
+        if not name or name != str(raw) or name == ".gitkeep":
+            continue
+        path = CONSTRUCTOR_PREVIEWS_DIR / name
+        try:
+            if path.is_file():
+                path.unlink()
+                removed += 1
+        except OSError:
+            pass
+    return removed
+
+
 def purge_expired_cart_items(db: Session, customer_id: Optional[int] = None) -> int:
     """Muddati o'tgan savat qatorlarini o'chiradi va nechtasi o'chirilganini
     qaytaradi. Savat har safar ochilganda chaqiriladi."""

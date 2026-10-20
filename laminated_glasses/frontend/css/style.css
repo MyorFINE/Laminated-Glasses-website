@@ -2842,3 +2842,49 @@ body { overflow-x: clip; }
   .user-chip { padding: 5px; }
   .menu-toggle { width: 40px; height: 40px; }
 }
+
+/* ---------- Yangiliklar: rasm, like va izoh tugmalari ---------- */
+
+.news-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); align-items: start; }
+
+.news-card { display: flex; flex-direction: column; }
+
+.news-card .news-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  background: var(--ice-2);
+}
+
+.news-card .news-date { align-self: flex-start; }
+
+.news-card .news-text { overflow-wrap: anywhere; }
+.news-card .news-text.expanded { white-space: pre-line; }
+
+.news-more {
+  align-self: flex-start;
+  margin-top: 8px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--sky-deep);
+  font: 700 0.84rem/1.2 var(--font-body);
+  cursor: pointer;
+}
+
+.news-more:hover { text-decoration: underline; }
+.news-more:focus-visible { outline: 2px solid var(--sky); outline-offset: 3px; border-radius: 4px; }
+
+.news-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.news-actions .comment-btn { flex: 1; width: auto; margin: 0; }

@@ -115,7 +115,7 @@ def _log_security_event(kind: str, xss_type, request: Request, sample: str) -> N
         db.close()
 
 
-_COMMENT_WRITE_RE = re.compile(r"^/api/(products/\d+/comments|comments/\d+)/?$")
+_COMMENT_WRITE_RE = re.compile(r"^/api/(products/\d+/comments|comments/\d+|news/\d+/comments|news-comments/\d+)/?$")
 
 
 def _is_comment_write(request: Request) -> bool:

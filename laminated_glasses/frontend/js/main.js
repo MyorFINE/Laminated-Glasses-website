@@ -1058,7 +1058,16 @@ const BADGE_SVG =
   '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" d="M12.00 1.10 L13.81 2.88 L16.17 1.93 L17.17 4.27 L19.71 4.29 L19.73 6.83 L22.07 7.83 L21.12 10.19 L22.90 12.00 L21.12 13.81 L22.07 16.17 L19.73 17.17 L19.71 19.71 L17.17 19.73 L16.17 22.07 L13.81 21.12 L12.00 22.90 L10.19 21.12 L7.83 22.07 L6.83 19.73 L4.29 19.71 L4.27 17.17 L1.93 16.17 L2.88 13.81 L1.10 12.00 L2.88 10.19 L1.93 7.83 L4.27 6.83 L4.29 4.29 L6.83 4.27 L7.83 1.93 L10.19 2.88Z"/><path fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="m7.6 12.4 3 3 5.8-6.2"/></svg>';
 
 const CM_PAGE = 20; // bir vaqtda chiqariladigan izohlar (uzun ro'yxat qotmasligi uchun)
-const cm = { productId: null, productName: "", data: null, editingId: null, shown: CM_PAGE, draft: "", busy: false, opener: null, replyTo: null };
+const cm = { kind: "product", productId: null, productName: "", data: null, editingId: null, shown: CM_PAGE, draft: "", busy: false, opener: null, replyTo: null };
+
+/* Izohlar oynasi ikki joyda ishlaydi: mahsulot ("product") va yangilik ("news").
+   `cm.productId` -- ochiq turgan mahsulot/yangilikning id'si. */
+function cmApi() {
+  const id = cm.productId;
+  return cm.kind === "news"
+    ? { social: `/news/${id}/social`, post: `/news/${id}/comments`, comment: (cid) => `/news-comments/${cid}`, noun: "yangilikka" }
+    : { social: `/products/${id}/social`, post: `/products/${id}/comments`, comment: (cid) => `/comments/${cid}`, noun: "mahsulotga" };
+}
 
 /* Kuchsiz qurilmalarda (kam xotira/yadro) yoki "animatsiyani kamaytirish" yoqilgan bo'lsa
    oyna animatsiyasiz, yengil ishlaydi. */
@@ -1199,11 +1208,12 @@ function closeComments() {
   cm.opener = null;
 }
 
-function openComments(product, opener) {
+function openComments(product, opener, kind = "product") {
   ensureCommentsUI();
-  if (cm.productId !== product.id) cm.draft = "";
+  if (cm.productId !== product.id || cm.kind !== kind) cm.draft = "";
+  cm.kind = kind;
   cm.productId = product.id;
-  cm.productName = product.name || "";
+  cm.productName = product.name || product.title || "";
   cm.data = null;
   cm.editingId = null;
   cm.replyTo = null;
@@ -1226,21 +1236,23 @@ function openComments(product, opener) {
 }
 
 async function loadComments(productId, opts = {}) {
+  const kind = cm.kind;
+  const stale = () => cm.productId !== productId || cm.kind !== kind; // foydalanuvchi boshqasini ochib bo'ldi
   try {
-    const data = await api(`/products/${productId}/social`);
-    if (cm.productId !== productId) return; // foydalanuvchi boshqa mahsulotni ochib bo'ldi
+    const data = await api(cmApi().social);
+    if (stale()) return;
     cm.data = data;
-    const p = productById(productId);
+    const p = kind === "news" ? newsById(productId) : productById(productId);
     if (p) {
       p.like_count = data.like_count;
       p.liked = data.liked;
       p.comment_count = data.comment_count;
-      paintProductSocial(productId);
+      if (kind === "news") paintNewsSocial(productId); else paintProductSocial(productId);
     }
     renderComments();
     if (opts.top) el("commentsList").scrollTop = 0;
   } catch (err) {
-    if (cm.productId !== productId) return;
+    if (stale()) return;
     const list = el("commentsList");
     list.textContent = "";
     const box = document.createElement("div");
@@ -1464,7 +1476,7 @@ function buildCommentEditor(comment) {
     cm.busy = true;
     save.disabled = true;
     try {
-      await api(`/comments/${comment.id}`, { method: "PUT", body: JSON.stringify({ body: text }) });
+      await api(cmApi().comment(comment.id), { method: "PUT", body: JSON.stringify({ body: text }) });
       cm.editingId = null;
       await loadComments(cm.productId);
       showToast("Izoh yangilandi.");
@@ -1512,7 +1524,7 @@ function renderComposer() {
   if (!staff && left === 0) {
     const full = document.createElement("p");
     full.className = "cm-hint cm-full";
-    full.textContent = `Siz bu mahsulotga ${data.comment_limit} ta izoh yozib bo'ldingiz. Yangisini yozish uchun avval eskisini o'chiring.`;
+    full.textContent = `Siz bu ${cmApi().noun} ${data.comment_limit} ta izoh yozib bo'ldingiz. Yangisini yozish uchun avval eskisini o'chiring.`;
     holder.appendChild(full);
     return;
   }
@@ -1602,7 +1614,7 @@ function renderComposer() {
       const isReply = !!cm.replyTo;
       const payload = { body: text };
       if (isReply) payload.reply_to_id = cm.replyTo.id;
-      await api(`/products/${cm.productId}/comments`, { method: "POST", body: JSON.stringify(payload) });
+      await api(cmApi().post, { method: "POST", body: JSON.stringify(payload) });
       cm.draft = "";
       cm.replyTo = null;
       if (!isReply) cm.shown = CM_PAGE;
@@ -1628,10 +1640,11 @@ async function deleteComment(commentId, opts = {}) {
     : `${whose} hamma uchun o'chiriladi.`;
   if (!(await lgConfirm({ tone: "danger", title: "Izohni o'chirish", message, confirmText: "Ha, o'chirish" }))) return;
   const productId = cm.productId;
+  const kind = cm.kind;
   try {
-    await api(`/comments/${commentId}`, { method: "DELETE" });
+    await api(cmApi().comment(commentId), { method: "DELETE" });
     if (cm.replyTo && cm.replyTo.id === commentId) cm.replyTo = null;
-    if (cm.productId === productId) await loadComments(productId);
+    if (cm.productId === productId && cm.kind === kind) await loadComments(productId);
     showToast("Izoh o'chirildi.");
   } catch (err) {
     if (err.status === 401) return;
@@ -1665,12 +1678,157 @@ document.addEventListener("lg:auth", (e) => {
   socialUserId = id;
   if (!id) {
     (state.products || []).forEach((p) => { p.liked = false; paintProductSocial(p.id); });
+    (newsState.items || []).forEach((n) => { n.liked = false; paintNewsSocial(n.id); });
     if (cm.data) { cm.data.liked = false; cm.data.my_comment_count = 0; cm.data.can_moderate = false; cm.replyTo = null; const clear = (c) => { c.is_mine = false; c.edits_left = 0; (c.replies || []).forEach(clear); }; cm.data.comments.forEach(clear); cm.editingId = null; renderComments(); }
     return;
   }
   refreshProductSocial();
+  refreshNewsSocial();
   if (el("commentsModal") && el("commentsModal").classList.contains("open") && cm.productId) loadComments(cm.productId);
 });
+
+/* ---------- Yangiliklar sahifasi: kartalar, like va izohlar ---------- */
+
+const newsState = { items: null };
+
+function newsById(id) {
+  return (newsState.items || []).find((n) => n.id === id) || null;
+}
+
+function newsImgSrc(url) {
+  if (!url) return "";
+  return /^https?:\/\//i.test(url) ? url : `${MEDIA_BASE}${url}`;
+}
+
+function attrEsc(str) {
+  return escapeHtml(str).replace(/"/g, "&quot;");
+}
+
+function newsLikeHTML(n) {
+  return `<button class="like-btn like-big${n.liked ? " liked" : ""}" type="button" data-news-like="${n.id}" aria-pressed="${n.liked ? "true" : "false"}" aria-label="${n.liked ? "Like'ni qaytarib olish" : "Yoqdi"}">${HEART_SVG}<span class="like-num">${n.like_count || 0}</span></button>`;
+}
+
+function paintNewsSocial(id) {
+  const n = newsById(id);
+  if (!n) return;
+  document.querySelectorAll(`[data-news-like="${id}"]`).forEach((btn) => {
+    btn.classList.toggle("liked", !!n.liked);
+    btn.setAttribute("aria-pressed", n.liked ? "true" : "false");
+    btn.setAttribute("aria-label", n.liked ? "Like'ni qaytarib olish" : "Yoqdi");
+    const num = btn.querySelector(".like-num");
+    if (num) num.textContent = n.like_count || 0;
+  });
+  document.querySelectorAll(`[data-news-comments-for="${id}"]`).forEach((node) => {
+    node.innerHTML = commentBtnHTML(n.comment_count);
+  });
+}
+
+function newsPreview(n) {
+  const excerpt = (n.excerpt || "").trim();
+  const body = (n.body || "").trim();
+  if (excerpt) return { text: excerpt, more: body && body !== excerpt };
+  if (body.length > 220) return { text: `${body.slice(0, 220).trimEnd()}…`, more: true };
+  return { text: body, more: false };
+}
+
+function renderNews() {
+  const grid = document.querySelector("#yangiliklar .news-grid");
+  if (!grid || !newsState.items) return;
+  if (!newsState.items.length) {
+    grid.innerHTML = '<p class="news-loading">Hozircha yangiliklar mavjud emas.</p>';
+    return;
+  }
+  grid.innerHTML = newsState.items
+    .map((n) => {
+      const prev = newsPreview(n);
+      const date = new Date(n.created_at).toLocaleDateString("uz-UZ");
+      return `<article class="news-card" data-news-id="${n.id}">
+        ${n.image_url ? `<img class="news-img" src="${attrEsc(newsImgSrc(n.image_url))}" alt="" loading="lazy" decoding="async">` : ""}
+        <span class="news-date">${escapeHtml(date)}</span>
+        <h3>${escapeHtml(n.title)}</h3>
+        <p class="news-text">${escapeHtml(prev.text)}</p>
+        ${prev.more ? '<button type="button" class="news-more" data-news-more="1" aria-expanded="false">To\'liq o\'qish</button>' : ""}
+        <div class="news-actions">
+          ${newsLikeHTML(n)}
+          <button type="button" class="comment-btn" data-news-comments-for="${n.id}">${commentBtnHTML(n.comment_count)}</button>
+        </div>
+      </article>`;
+    })
+    .join("");
+}
+
+let newsPending = new Set();
+async function toggleNewsLike(id) {
+  if (!state.customer) {
+    requireLogin("Yangilikka like bosish uchun Google akkauntingiz bilan kiring.", () => toggleNewsLike(id));
+    return;
+  }
+  const n = newsById(id);
+  if (!n || newsPending.has(id)) return;
+  newsPending.add(id);
+  try {
+    const res = await api(`/news/${id}/like`, { method: n.liked ? "DELETE" : "PUT" });
+    n.liked = res.liked;
+    n.like_count = res.like_count;
+    paintNewsSocial(id);
+  } catch (err) {
+    if (err.status !== 401) showToast(err.message, true);
+  } finally {
+    newsPending.delete(id);
+  }
+}
+
+async function loadNews() {
+  const grid = document.querySelector("#yangiliklar .news-grid");
+  if (!grid || document.body.dataset.page !== "news") return;
+  try {
+    newsState.items = await api("/news");
+    renderNews();
+  } catch (_) {
+    grid.innerHTML = '<p class="news-loading">Yangiliklarni yuklab bo\'lmadi. Birozdan so\'ng qayta urinib ko\'ring.</p>';
+  }
+}
+
+/* Kirish/chiqish o'zgarganda: kim like bosganini jimgina qayta o'qiydi. */
+async function refreshNewsSocial() {
+  if (!newsState.items) return;
+  try {
+    const fresh = await api("/news");
+    fresh.forEach((f) => {
+      const n = newsById(f.id);
+      if (!n) return;
+      n.like_count = f.like_count; n.comment_count = f.comment_count; n.liked = f.liked;
+      paintNewsSocial(n.id);
+    });
+  } catch (_) { /* e'tiborsiz */ }
+}
+
+(function bindNewsEvents() {
+  const grid = document.querySelector("#yangiliklar .news-grid");
+  if (!grid || document.body.dataset.page !== "news") return;
+  grid.addEventListener("click", (e) => {
+    const like = e.target.closest("[data-news-like]");
+    if (like) { toggleNewsLike(Number(like.dataset.newsLike)); return; }
+    const cbtn = e.target.closest("[data-news-comments-for]");
+    if (cbtn) {
+      const n = newsById(Number(cbtn.dataset.newsCommentsFor));
+      if (n) openComments({ id: n.id, name: n.title }, cbtn, "news");
+      return;
+    }
+    const more = e.target.closest("[data-news-more]");
+    if (more) {
+      const card = more.closest(".news-card");
+      const n = card && newsById(Number(card.dataset.newsId));
+      if (!n) return;
+      const open = more.getAttribute("aria-expanded") === "true";
+      const text = card.querySelector(".news-text");
+      text.textContent = open ? newsPreview(n).text : (n.body || n.excerpt || "");
+      text.classList.toggle("expanded", !open);
+      more.setAttribute("aria-expanded", open ? "false" : "true");
+      more.textContent = open ? "To'liq o'qish" : "Yig'ish";
+    }
+  });
+})();
 
 /* Savat */
 
@@ -1946,6 +2104,7 @@ async function init() {
     api("/site").catch(() => null),
     api("/categories").catch(() => []),
     loadProducts(),
+    loadNews(),
   ]);
 
   if (siteResult) {

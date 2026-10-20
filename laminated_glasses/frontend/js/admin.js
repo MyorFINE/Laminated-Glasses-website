@@ -894,29 +894,68 @@ async function loadEverything() {
 verifyExistingToken();
 
 // News CRUD + contact/social links
+const MEDIA_ORIGIN = API_BASE_URL.replace(/\/api$/, '');
+function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function newsImageSrc(url){ if(!url) return ''; return /^https?:\/\//i.test(url) ? url : `${MEDIA_ORIGIN}${url}`; }
+const adminNewsCache = new Map();
+
 async function loadAdminNews(){
  const list=document.getElementById('adminNewsList'); if(!list)return;
- try{const items=await apiRequest('/admin/news');list.innerHTML=items.length?items.map(n=>`<div style="display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--line);flex-wrap:wrap"><div><strong>${escapeHtml(n.title)}</strong><div class="sub">${n.is_published?'E’lon qilingan':'Qoralama'} · ${new Date(n.created_at).toLocaleDateString('uz-UZ')}</div></div><div><button class="btn btn-ghost btn-sm" data-edit-news="${n.id}">Tahrirlash</button> <button class="btn btn-ghost btn-sm" data-del-news="${n.id}">O‘chirish</button></div></div>`).join(''):'Hozircha yangilik yo‘q.';}catch(e){list.textContent=e.message;}
+ try{
+  const items=await apiRequest('/admin/news');
+  adminNewsCache.clear(); items.forEach(n=>adminNewsCache.set(n.id,n));
+  list.innerHTML=items.length?items.map(n=>`<div class="news-row">
+   ${n.image_url?`<img class="news-row-thumb" src="${escapeHtml(newsImageSrc(n.image_url))}" alt="" loading="lazy">`:'<span class="news-row-thumb news-row-thumb-empty" aria-hidden="true">📰</span>'}
+   <div class="news-row-main"><strong>${escapeHtml(n.title)}</strong>
+    <div class="sub">${n.is_published?'E’lon qilingan':'Qoralama'} · ${new Date(n.created_at).toLocaleDateString('uz-UZ')} · ♥ ${n.like_count} · 💬 ${n.comment_count}</div></div>
+   <div class="news-row-actions"><button class="btn btn-ghost btn-sm" data-comments-news="${n.id}">Izohlar (${n.comment_count})</button> <button class="btn btn-ghost btn-sm" data-edit-news="${n.id}">Tahrirlash</button> <button class="btn btn-ghost btn-sm" data-del-news="${n.id}">O‘chirish</button></div></div>`).join(''):'Hozircha yangilik yo‘q.';
+ }catch(e){list.textContent=e.message;}
 }
-function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function closeNewsForm(){document.getElementById('newsFormOverlay').style.display='none';}
+function closeNewsForm(){document.getElementById('newsFormOverlay').classList.remove('open');}
+
+/* ---- Yangilik rasmi: faylni yuklash (URL kiritilmaydi) ---- */
+const newsImg = { url: '', uploading: false };
+function paintNewsImage(){
+ const prev=document.getElementById('newsImagePreview'), rm=document.getElementById('newsImageRemove'),
+  pick=document.getElementById('newsImagePickLabel');
+ document.getElementById('newsImage').value=newsImg.url||'';
+ if(newsImg.url){prev.src=newsImageSrc(newsImg.url);prev.hidden=false;rm.hidden=false;pick.textContent='Rasmni almashtirish';}
+ else{prev.removeAttribute('src');prev.hidden=true;rm.hidden=true;pick.textContent='Rasm tanlash';}
+}
+document.getElementById('newsImageFile')?.addEventListener('change',async e=>{
+ const input=e.target, file=input.files&&input.files[0]; if(!file)return;
+ const hint=document.getElementById('newsImageHint'), btn=document.getElementById('saveNewsBtn');
+ if(!/^image\/(jpeg|png|webp)$/.test(file.type)){showToast('Faqat JPG, PNG yoki WEBP rasm yuklash mumkin.',true);input.value='';return;}
+ if(file.size>8*1024*1024){showToast('Rasm hajmi 8 MB dan oshmasin.',true);input.value='';return;}
+ newsImg.uploading=true; btn.disabled=true; hint.textContent='Rasm yuklanmoqda…';
+ try{
+  const fd=new FormData(); fd.append('image',file);
+  const r=await apiRequest('/admin/news/upload-image',{method:'POST',body:fd});
+  newsImg.url=r.image_url; paintNewsImage();
+  hint.textContent='Rasm yuklandi. “Yangilikni saqlash” tugmasini bosing.';
+ }catch(err){showToast(err.message,true);hint.textContent='Rasm yuklanmadi. Qayta urinib ko‘ring.';}
+ finally{newsImg.uploading=false;btn.disabled=false;input.value='';}
+});
+document.getElementById('newsImageRemove')?.addEventListener('click',()=>{newsImg.url='';paintNewsImage();document.getElementById('newsImageHint').textContent='Rasm olib tashlandi (saqlaganingizdan so‘ng).';});
+
 async function editNews(id=null){
- let old=null;
- if(id){old=(await apiRequest('/admin/news')).find(n=>n.id===id);if(!old)return;}
+ const old=id?adminNewsCache.get(id)||(await apiRequest('/admin/news')).find(n=>n.id===id):null;
+ if(id&&!old)return;
  document.getElementById('newsEditId').value=old?.id||'';
  document.getElementById('newsFormHeading').textContent=old?'Yangilikni tahrirlash':'Yangi yangilik qo‘shish';
  document.getElementById('newsTitle').value=old?.title||'';
  document.getElementById('newsExcerpt').value=old?.excerpt||'';
  document.getElementById('newsBody').value=old?.body||'';
- document.getElementById('newsImage').value=old?.image_url||'';
+ newsImg.url=old?.image_url||''; paintNewsImage();
+ document.getElementById('newsImageHint').textContent='JPG, PNG yoki WEBP, 8 MB gacha. Rasm serverga yuklanadi — havola kiritish shart emas.';
  document.getElementById('newsPublished').checked=old?!!old.is_published:true;
- document.getElementById('newsFormOverlay').style.display='flex';
+ document.getElementById('newsFormOverlay').classList.add('open');
  document.getElementById('newsTitle').focus();
 }
 document.getElementById('newsForm')?.addEventListener('submit',async e=>{
  e.preventDefault();const id=document.getElementById('newsEditId').value;
- const payload={title:document.getElementById('newsTitle').value.trim(),excerpt:document.getElementById('newsExcerpt').value.trim(),body:document.getElementById('newsBody').value.trim(),image_url:document.getElementById('newsImage').value.trim()||null,is_published:document.getElementById('newsPublished').checked};
- if(payload.title.length<2||!payload.body){showToast('Sarlavha va to‘liq matnni kiriting',true);return;}
+ if(newsImg.uploading){showToast('Rasm yuklanishini kuting.',true);return;}
+ const payload={title:document.getElementById('newsTitle').value.trim(),excerpt:document.getElementById('newsExcerpt').value.trim(),body:document.getElementById('newsBody').value.trim(),image_url:newsImg.url||null,is_published:document.getElementById('newsPublished').checked};
  const btn=document.getElementById('saveNewsBtn');btn.disabled=true;btn.textContent='Saqlanmoqda…';
  try{await apiRequest(id?`/admin/news/${id}`:'/admin/news',{method:id?'PUT':'POST',body:JSON.stringify(payload)});closeNewsForm();showToast('Yangilik saqlandi');await loadAdminNews();}
  catch(err){showToast(err.message,true);}finally{btn.disabled=false;btn.textContent='Yangilikni saqlash';}
@@ -924,7 +963,47 @@ document.getElementById('newsForm')?.addEventListener('submit',async e=>{
 ['closeNewsFormBtn','cancelNewsFormBtn'].forEach(id=>document.getElementById(id)?.addEventListener('click',closeNewsForm));
 document.getElementById('newsFormOverlay')?.addEventListener('click',e=>{if(e.target.id==='newsFormOverlay')closeNewsForm();});
 document.getElementById('addNewsBtn')?.addEventListener('click',()=>editNews());
-document.getElementById('adminNewsList')?.addEventListener('click',async e=>{const edit=e.target.closest('[data-edit-news]'),del=e.target.closest('[data-del-news]');try{if(edit)await editNews(Number(edit.dataset.editNews));if(del&&await lgConfirm({tone:'danger',title:'Yangilikni o‘chirish',message:'Yangilik butunlay o‘chiriladi.',confirmText:'Ha, o‘chirish'})){await apiRequest(`/admin/news/${del.dataset.delNews}`,{method:'DELETE'});loadAdminNews();}}catch(err){showToast(err.message,true);}});
+
+/* ---- Yangilik izohlari moderatsiyasi (o'chirish bazadan butunlay) ---- */
+let newsCommentsFor=null;
+function closeNewsComments(){document.getElementById('newsCommentsOverlay').classList.remove('open');newsCommentsFor=null;}
+async function openNewsComments(id){
+ newsCommentsFor=id;
+ const n=adminNewsCache.get(id);
+ document.getElementById('newsCommentsSub').textContent=n?n.title:'';
+ document.getElementById('newsCommentsOverlay').classList.add('open');
+ await renderNewsComments();
+}
+async function renderNewsComments(){
+ const box=document.getElementById('newsCommentsList'); if(!box||newsCommentsFor==null)return;
+ try{
+  const rows=await apiRequest(`/admin/news/${newsCommentsFor}/comments`);
+  box.innerHTML=rows.length?rows.map(c=>`<div class="news-comment-row${c.parent_id?' is-reply':''}">
+   <div class="news-comment-main"><strong>${escapeHtml(c.customer_name)}</strong>${c.is_staff?' <span class="staff-tag">Admin</span>':''}
+    <span class="sub"> · ${escapeHtml(c.customer_email||'')} · ${new Date(c.created_at).toLocaleString('uz-UZ',{dateStyle:'short',timeStyle:'short'})}</span>
+    <p>${escapeHtml(c.body)}</p></div>
+   <button class="btn btn-danger btn-sm" data-del-news-comment="${c.id}">O‘chirish</button></div>`).join(''):'<p class="state-msg">Bu yangilikka hali izoh yozilmagan.</p>';
+ }catch(err){box.textContent=err.message;}
+}
+document.getElementById('closeNewsCommentsBtn')?.addEventListener('click',closeNewsComments);
+document.getElementById('newsCommentsOverlay')?.addEventListener('click',async e=>{
+ if(e.target.id==='newsCommentsOverlay'){closeNewsComments();return;}
+ const del=e.target.closest('[data-del-news-comment]'); if(!del)return;
+ try{
+  if(!await lgConfirm({tone:'danger',title:'Izohni o‘chirish',message:'Izoh (va unga yozilgan javoblar) bazadan butunlay o‘chiriladi.',confirmText:'Ha, o‘chirish'}))return;
+  await apiRequest(`/admin/news-comments/${del.dataset.delNewsComment}`,{method:'DELETE'});
+  showToast('Izoh o‘chirildi');await renderNewsComments();loadAdminNews();
+ }catch(err){showToast(err.message,true);}
+});
+
+document.getElementById('adminNewsList')?.addEventListener('click',async e=>{
+ const edit=e.target.closest('[data-edit-news]'),del=e.target.closest('[data-del-news]'),cm=e.target.closest('[data-comments-news]');
+ try{
+  if(edit)await editNews(Number(edit.dataset.editNews));
+  if(cm)await openNewsComments(Number(cm.dataset.commentsNews));
+  if(del&&await lgConfirm({tone:'danger',title:'Yangilikni o‘chirish',message:'Yangilik, uning rasmi, izohlari va like’lari butunlay o‘chiriladi.',confirmText:'Ha, o‘chirish'})){await apiRequest(`/admin/news/${del.dataset.delNews}`,{method:'DELETE'});showToast('Yangilik o‘chirildi');loadAdminNews();}
+ }catch(err){showToast(err.message,true);}
+});
 document.getElementById('sideNav')?.addEventListener('click',e=>{if(e.target.closest('[data-view="news"]')){loadAdminNews();loadSiteLinks();}});
 async function loadSiteLinks(){try{const d=await apiRequest('/admin/site-links');({instagram:'linkInstagram',telegram:'linkTelegram',youtube:'linkYoutube',phone:'linkPhone',address:'linkAddress',email:'linkEmail'}&&Object.entries({instagram:'linkInstagram',telegram:'linkTelegram',youtube:'linkYoutube',phone:'linkPhone',address:'linkAddress',email:'linkEmail'}).forEach(([k,id])=>document.getElementById(id).value=d[k]||''));}catch(e){showToast(e.message,true);}}
 document.getElementById('siteLinksForm')?.addEventListener('submit',async e=>{e.preventDefault();try{for(const [k,id] of Object.entries({instagram:'linkInstagram',telegram:'linkTelegram',youtube:'linkYoutube',phone:'linkPhone',address:'linkAddress',email:'linkEmail'}))await apiRequest(`/admin/site-links/${k}`,{method:'PUT',body:JSON.stringify({value:document.getElementById(id).value.trim()})});showToast('Aloqa ma’lumotlari saqlandi');}catch(err){showToast(err.message,true);}});
@@ -1412,7 +1491,105 @@ document.getElementById('addConstructorSizeForm')?.addEventListener('submit', as
 });
 
 document.getElementById('sideNav')?.addEventListener('click', (e) => {
-  if (e.target.closest('[data-view="constructor"]')) loadConstructorSizes();
+  if (e.target.closest('[data-view="constructor"]')) { loadConstructorSizes(); loadCtorUploads(); }
+});
+
+/* ---------- Konstruktor: foydalanuvchilar yuklagan rasmlarni ko'rish va tozalash ---------- */
+
+const ctorUploads = { items: [], selected: new Set(), autoHours: 24 };
+
+function fmtSizeKb(kb) { return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.round(kb)} KB`; }
+function fmtAge(h) {
+  if (h < 1) return 'hozirgina';
+  if (h < 48) return `${Math.floor(h)} soat oldin`;
+  return `${Math.floor(h / 24)} kun oldin`;
+}
+
+function paintCtorUploadsTools() {
+  const n = ctorUploads.selected.size;
+  const total = ctorUploads.items.length;
+  const delSel = document.getElementById('ctorUploadsDeleteSel');
+  const delAll = document.getElementById('ctorUploadsDeleteAll');
+  const selAll = document.getElementById('ctorUploadsSelectAll');
+  if (!delSel) return;
+  delSel.disabled = n === 0;
+  delSel.textContent = n ? `Belgilanganlarni o'chirish (${n})` : "Belgilanganlarni o'chirish";
+  delAll.disabled = total === 0;
+  selAll.disabled = total === 0;
+  selAll.textContent = n && n === total ? 'Belgini olib tashlash' : 'Hammasini belgilash';
+}
+
+function renderCtorUploads() {
+  const grid = document.getElementById('ctorUploadsGrid');
+  if (!grid) return;
+  if (!ctorUploads.items.length) {
+    grid.innerHTML = '<p class="state-msg">Hozircha foydalanuvchilar yuklagan rasm yo\'q.</p>';
+    paintCtorUploadsTools();
+    return;
+  }
+  grid.innerHTML = ctorUploads.items.map((it) => `
+    <label class="ctor-upload${ctorUploads.selected.has(it.filename) ? ' selected' : ''}">
+      <input type="checkbox" data-ctor-file="${escapeHtml(it.filename)}" ${ctorUploads.selected.has(it.filename) ? 'checked' : ''} />
+      <a class="ctor-upload-img" href="${escapeHtml(MEDIA_ORIGIN + it.url)}" target="_blank" rel="noopener" title="Katta ko'rish">
+        <img src="${escapeHtml(MEDIA_ORIGIN + it.url)}" alt="" loading="lazy" />
+      </a>
+      <span class="ctor-upload-meta">${escapeHtml(fmtAge(it.age_hours))} · ${escapeHtml(fmtSizeKb(it.size_kb))}</span>
+    </label>`).join('');
+  paintCtorUploadsTools();
+}
+
+async function loadCtorUploads() {
+  const grid = document.getElementById('ctorUploadsGrid');
+  if (!grid) return;
+  try {
+    const data = await apiRequest('/admin/constructor/uploads');
+    ctorUploads.items = data.items;
+    ctorUploads.autoHours = data.auto_clean_hours;
+    // Allaqachon yo'q bo'lib ketgan fayllar belgisi tozalanadi.
+    const names = new Set(data.items.map((i) => i.filename));
+    ctorUploads.selected = new Set([...ctorUploads.selected].filter((n) => names.has(n)));
+    document.getElementById('ctorUploadsInfo').textContent = data.total_count
+      ? `${data.total_count} ta rasm · ${fmtSizeKb(data.total_size_kb)}. Rasmni belgilab o'chiring. ${data.auto_clean_hours} soatdan eskilari o'zi tozalanadi.`
+      : `Hozircha rasm yo'q. ${data.auto_clean_hours} soatdan eskilari o'zi tozalanadi.`;
+    renderCtorUploads();
+  } catch (err) {
+    grid.textContent = err.message;
+  }
+}
+
+async function deleteCtorUploads(payload, confirmMessage) {
+  if (!(await lgConfirm({ tone: 'danger', title: "Rasmlarni o'chirish", message: confirmMessage, confirmText: "Ha, o'chirish" }))) return;
+  try {
+    const r = await apiRequest('/admin/constructor/uploads/delete', { method: 'POST', body: JSON.stringify(payload) });
+    ctorUploads.selected.clear();
+    showToast(`${r.deleted} ta rasm o'chirildi`);
+    await loadCtorUploads();
+    if (typeof loadDatabaseStatus === 'function' && document.getElementById('view-database')?.classList.contains('active')) loadDatabaseStatus();
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+
+document.getElementById('ctorUploadsGrid')?.addEventListener('change', (e) => {
+  const cb = e.target.closest('[data-ctor-file]');
+  if (!cb) return;
+  const name = cb.dataset.ctorFile;
+  if (cb.checked) ctorUploads.selected.add(name); else ctorUploads.selected.delete(name);
+  cb.closest('.ctor-upload')?.classList.toggle('selected', cb.checked);
+  paintCtorUploadsTools();
+});
+document.getElementById('ctorUploadsRefresh')?.addEventListener('click', loadCtorUploads);
+document.getElementById('ctorUploadsSelectAll')?.addEventListener('click', () => {
+  const all = ctorUploads.selected.size === ctorUploads.items.length;
+  ctorUploads.selected = all ? new Set() : new Set(ctorUploads.items.map((i) => i.filename));
+  renderCtorUploads();
+});
+document.getElementById('ctorUploadsDeleteSel')?.addEventListener('click', () => {
+  const names = [...ctorUploads.selected];
+  if (names.length) deleteCtorUploads({ filenames: names }, `Belgilangan ${names.length} ta rasm serverdan butunlay o'chiriladi.`);
+});
+document.getElementById('ctorUploadsDeleteAll')?.addEventListener('click', () => {
+  deleteCtorUploads({ delete_all: true }, `Foydalanuvchilar yuklagan BARCHA (${ctorUploads.items.length} ta) rasm serverdan butunlay o'chiriladi.`);
 });
 
 /* ---------- Zaxira nusxalar (backups) ---------- */
