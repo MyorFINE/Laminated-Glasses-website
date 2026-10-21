@@ -1,0 +1,76 @@
+/* "Xonada ko'rish" (AR) — to'liq ekranli oyna. Kamera/rasm ustida ishlagani uchun
+   ranglar doim qorong'i (yorug' va Dark theme'da bir xil ko'rinadi). */
+body.ar-lock{overflow:hidden;}
+
+.ar-overlay{
+  position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;
+  background:#07141f;color:#fff;font-family:var(--font-body,'Manrope',system-ui,sans-serif);
+  opacity:0;transition:opacity .22s ease;
+  padding-top:env(safe-area-inset-top,0px);
+}
+.ar-overlay[hidden]{display:none;}
+.ar-overlay.open{opacity:1;}
+
+.ar-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;flex:none;background:rgba(7,20,31,.92);border-bottom:1px solid rgba(255,255,255,.08);}
+.ar-title{display:flex;flex-direction:column;min-width:0;}
+.ar-title strong{font-size:1rem;line-height:1.2;}
+.ar-title span{font-size:.76rem;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ar-close{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;font-size:1rem;cursor:pointer;}
+.ar-close:hover{background:rgba(255,255,255,.18);}
+
+.ar-stagebox{position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0b1c2a;}
+.ar-stagebox canvas{display:block;touch-action:none;cursor:crosshair;max-width:100%;max-height:100%;}
+
+.ar-hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);max-width:calc(100% - 28px);padding:8px 14px;border-radius:999px;background:rgba(6,28,44,.82);backdrop-filter:blur(6px);font-size:.8rem;font-weight:600;text-align:center;pointer-events:none;}
+.ar-hint[hidden]{display:none;}
+
+.ar-start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(circle at 50% 30%,#12354d,#07141f 70%);}
+.ar-start[hidden]{display:none;}
+.ar-start-card{width:min(420px,100%);display:flex;flex-direction:column;gap:12px;text-align:center;}
+.ar-start-card h3{margin:0;font-family:var(--font-head,inherit);font-size:1.3rem;}
+.ar-start-card p{margin:0 0 6px;color:rgba(255,255,255,.72);font-size:.9rem;line-height:1.5;}
+.ar-start-err{min-height:18px;color:#ffb4a3;font-size:.82rem;line-height:1.45;}
+
+.ar-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:12px;border:1.5px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:#fff;font:700 .9rem var(--font-body,inherit);cursor:pointer;transition:background .16s ease,transform .16s ease;}
+.ar-btn svg{width:20px;height:20px;flex:none;}
+.ar-btn:hover{background:rgba(255,255,255,.16);}
+.ar-btn:active{transform:scale(.98);}
+.ar-btn-main{background:#2f8fd1;border-color:#2f8fd1;}
+.ar-btn-main:hover{background:#3a9ce0;}
+
+.ar-panel{flex:none;background:rgba(7,20,31,.96);border-top:1px solid rgba(255,255,255,.1);padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));max-height:46vh;overflow:auto;}
+.ar-panel[hidden],.ar-step[hidden]{display:none;}
+.ar-step-title{font-weight:800;font-size:.95rem;margin-bottom:10px;}
+.ar-ref-row{display:flex;gap:10px;flex-wrap:wrap;}
+.ar-ref-row select,.ar-cm{border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;border-radius:10px;font:600 .88rem var(--font-body,inherit);}
+.ar-ref-row select{flex:1 1 220px;padding:11px 12px;min-width:0;}
+.ar-ref-row select option{color:#0b1c2a;}
+.ar-cm{display:flex;align-items:center;gap:6px;padding:0 12px;flex:0 0 112px;}
+.ar-cm input{width:100%;min-width:0;border:0;background:transparent;color:#fff;font:700 .95rem var(--font-body,inherit);padding:11px 0;outline:none;}
+.ar-cm span{color:rgba(255,255,255,.6);font-size:.82rem;}
+.ar-note{margin:10px 0 12px;font-size:.8rem;line-height:1.5;color:rgba(255,255,255,.7);}
+.ar-actions{display:flex;gap:10px;justify-content:flex-end;align-items:center;}
+.ar-actions .ar-btn{flex:1 1 0;}
+.ar-actions-wrap{flex-wrap:wrap;}
+.ar-check{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:600;flex:1 1 100%;color:rgba(255,255,255,.85);}
+.ar-check input{width:18px;height:18px;accent-color:#2f8fd1;}
+
+.ar-sliders{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;margin-bottom:12px;}
+.ar-sliders label{display:flex;flex-direction:column;gap:2px;font-size:.78rem;font-weight:700;color:rgba(255,255,255,.85);}
+.ar-sliders output{float:right;color:#8fd0ff;font-variant-numeric:tabular-nums;}
+.ar-sliders label{position:relative;}
+.ar-sliders output{position:absolute;right:0;top:0;}
+.ar-sliders input[type=range]{width:100%;height:28px;margin:0;accent-color:#2f8fd1;touch-action:pan-y;}
+
+.ar-video{position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;}
+
+@media (max-width:560px){.ar-sliders{grid-template-columns:1fr;}}
+@media (min-width:861px){
+  .ar-overlay{padding:0;}
+  .ar-panel{max-height:none;display:flex;justify-content:center;}
+  .ar-step{width:min(760px,100%);}
+}
+@media (prefers-reduced-motion:reduce){.ar-overlay,.ar-btn{transition:none;}}
+
+/* AR oynasi ustida toast ko'rinib tursin */
+.toast{z-index:2100 !important;}

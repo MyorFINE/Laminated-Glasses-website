@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="/css/style.css" />
 <link rel="stylesheet" href="/css/dialogs.css" />
 <link rel="stylesheet" href="/css/theme.css" />
+<link rel="stylesheet" href="/css/ar-room.css" />
 <style>
   .constructor-grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:26px;align-items:start;}
   @media (max-width:860px){.constructor-grid{grid-template-columns:1fr;}}
@@ -309,6 +310,10 @@
             Telegramga yuborish
           </button>
         </div>
+        <button type="button" class="btn btn-primary btn-block ar-launch" id="constructorArBtn" style="margin-top:8px; display:flex; align-items:center; justify-content:center; gap:8px;" disabled>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>
+          <span>Xonada ko'rish</span>
+        </button>
         <div class="constructor-error" id="constructorShareError"></div>
       </div>
     </div>
@@ -597,6 +602,7 @@
 
 <script src="/js/dialogs.js"></script>
 <script src="/js/main.js"></script>
+<script src="/js/ar-room.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
  const visible=['konstruktor'];
@@ -897,6 +903,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(shareBtn) shareBtn.disabled = !ready;
     if(downloadBtn) downloadBtn.disabled = !ready;
     if(zoomBtn) zoomBtn.hidden = !ready;
+    const arBtn = $('constructorArBtn');
+    if(arBtn) arBtn.disabled = !ready;
     $('constructorEditor').hidden = !ready;
 
     paneImgs = [];
@@ -1565,6 +1573,59 @@ document.addEventListener("DOMContentLoaded",()=>{
     updatePreviewInfo();
     renderStage();
   }
+
+
+  /* ---- "Xonada ko'rish" (AR) moduli uchun ko'prik (js/ar-room.js ishlatadi) ----
+     Tayyor dizaynni (tahrirlar bilan) alohida panellar bo'yicha chizadi; panellar
+     tashqarisi SHAFFOF qoladi (bo'yi har xil panellar devorda to'g'ri ko'rinishi uchun). */
+  async function buildArTexture(){
+    const panes = getPanes();
+    if(!panes.length || !state.work) return null;
+    const totalW = panes.reduce((s,p)=>s+p.w,0);
+    const maxH = Math.max(...panes.map(p=>p.h));
+    const ppc = Math.max(2, Math.min(12, 2600 / Math.max(totalW, maxH)));
+    const W = Math.max(1, Math.round(totalW * ppc)), H = Math.max(1, Math.round(maxH * ppc));
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    const L = layout(W, H);
+    const layer = document.createElement('canvas');
+    layer.width = W; layer.height = H;
+    const lctx = layer.getContext('2d');
+    lctx.imageSmoothingEnabled = true; lctx.imageSmoothingQuality = 'high';
+    lctx.drawImage(state.work, L.ox, L.oy, L.rw, L.rh);
+    applyAdjustPixels(lctx, W, H);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(layer, 0, 0);
+
+    // faqat panellar egallagan joy qoladi
+    const rects = [];
+    let xCm = 0;
+    panes.forEach(p => {
+      const w = Math.round(p.w * ppc), h = Math.round(p.h * ppc);
+      rects.push({ x: Math.round(xCm * ppc), y: Math.round((H - h) / 2), w, h });
+      xCm += p.w;
+    });
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.fillStyle = '#000';
+    rects.forEach(r => ctx.fillRect(r.x, r.y, r.w, r.h));
+    ctx.globalCompositeOperation = 'source-over';
+
+    // har bir panelning ichki ramkasi (panellar orasida ajratuvchi chiziq bo'lib ko'rinadi)
+    const fw = Math.max(2, Math.round(ppc * 0.5));
+    ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+    ctx.lineWidth = fw;
+    rects.forEach(r => ctx.strokeRect(r.x + fw/2, r.y + fw/2, Math.max(1, r.w - fw), Math.max(1, r.h - fw)));
+
+    const size = selectedSize();
+    return { canvas, wCm: totalW, hCm: maxH, label: size ? size.label : '' };
+  }
+  window.lgConstructorAR = {
+    isReady: () => !!(state.imageSrc && state.work && getPanes().length),
+    buildTexture: buildArTexture,
+  };
 
   renderLimit();
   if(customer) loadLimit();
