@@ -87,13 +87,14 @@
         '<div class="ar-step" id="arStepPlace" hidden>' +
           '<div class="ar-sliders">' +
             '<label>Burilish <output id="arRotOut">0°</output><input type="range" id="arRot" min="-15" max="15" step="0.5" value="0"></label>' +
+            '<label>Masshtab <output id="arScaleOut">100%</output><input type="range" id="arScale" min="50" max="130" step="1" value="100"></label>' +
             '<label>Yon perspektiva <output id="arYawOut">0°</output><input type="range" id="arYaw" min="-45" max="45" step="1" value="0"></label>' +
             '<label>Yuqori / past <output id="arPitchOut">0°</output><input type="range" id="arPitch" min="-30" max="30" step="1" value="0"></label>' +
             '<label>Yorug\'lik <output id="arLightOut">100%</output><input type="range" id="arLight" min="55" max="100" step="1" value="100"></label>' +
           '</div>' +
           '<div class="ar-actions ar-actions-wrap">' +
             '<label class="ar-check"><input type="checkbox" id="arShowDim" checked> O\'lchamni ko\'rsatish</label>' +
-            '<button type="button" class="ar-btn" id="arRecalib">Qayta o\'lchash</button>' +
+            '<button type="button" class="ar-btn" id="arRecalib">Aniq o\'lchash</button>' +
             '<button type="button" class="ar-btn ar-btn-main" id="arSave">Rasmni saqlash</button>' +
           '</div>' +
         '</div>' +
@@ -117,7 +118,7 @@
       calib: { a: { x: 0.30, y: 0.5 }, b: { x: 0.70, y: 0.5 }, cm: 29.7 },
       k: 0,                 // 1 sm = k * canvas eni (piksel)
       pos: { x: 0.5, y: 0.5 },
-      rot: 0, yaw: 0, pitch: 0, light: 100, showDim: true,
+      rot: 0, yaw: 0, pitch: 0, light: 100, showDim: true, scaleMul: 1,
       tex: null, quad: null,
       drag: null, raf: 0, loop: 0, opening: false,
     };
@@ -184,7 +185,7 @@
       await v.play();
       S.src = 'video'; S.video = v; S.photo = null; S.bg = null;
       layoutStage();
-      enterCalib();
+      autoPlace();
       startLoop();
     } catch (e) {
       var name = e && e.name;
@@ -210,7 +211,7 @@
       stopStream();
       S.src = 'photo'; S.photo = img; S.video = null;
       layoutStage();
-      enterCalib();
+      autoPlace();
     };
     img.onerror = function () { URL.revokeObjectURL(url); err.textContent = "Rasmni ochib bo'lmadi. Boshqa rasm tanlang."; };
     img.src = url;
@@ -226,19 +227,46 @@
     var hint = $('arHint');
     if (m === 'calib') {
       hint.hidden = false;
-      hint.textContent = "Chiziq uchlarini etalon narsaning ikki chetiga suring.";
+      hint.textContent = "Ixtiyoriy: chiziq uchlarini o'lchami ma'lum narsaning ikki chetiga suring.";
       $('arCalibNote').textContent = S.src === 'video'
         ? "Devorga A4 qog'oz (yoki o'lchami ma'lum narsa) tuting. Chiziq uchlarini uning chetlariga moslang. Keyin telefonni shu masofada ushlab turing."
         : "Rasmdagi o'lchami ma'lum narsaning (A4 qog'oz, eshik va h.k.) ikki chetini chiziq uchlari bilan belgilang, o'lchamini kiriting.";
     } else if (m === 'place') {
       hint.hidden = false;
       hint.textContent = S.src === 'video'
-        ? "Oynani barmoq bilan devordagi kerakli joyga suring."
-        : "Oyna qo'ymoqchi bo'lgan joyni bosing — oyna o'sha yerga qo'yiladi. Keyin suring.";
+        ? "Oyna avtomatik qo'yildi. Devordagi kerakli joyga barmoq bilan suring."
+        : "Oyna avtomatik qo'yildi. Qo'ymoqchi bo'lgan joyni bosing — oyna o'sha yerga o'tadi.";
     } else {
       hint.hidden = true;
     }
     requestRender();
+  }
+
+  /* Avtomatik joylashtirish: etalon talab qilinmaydi.
+     Kamera: telefon kamerasining odatiy ko'rish burchagi va devordan ~2 m masofa taxmin qilinadi.
+     Rasm: xona rasmi balandligi ~2.6 m (odatiy shift balandligi) deb olinadi.
+     Oyna hech qachon kadrning ~65% idan kattalashmaydi. Aniqroq bo'lishi uchun
+     "Aniq o'lchash" (ixtiyoriy) va "Masshtab" slayderi bor. */
+  function autoPlace() {
+    var T = S.tex, ppc;
+    if (S.src === 'video') {
+      var fov = (S.ch > S.cw ? 52 : 65) * Math.PI / 180;          // gorizontal ko'rish burchagi
+      var visibleW = 2 * 200 * Math.tan(fov / 2);                  // 2 m masofadagi kadr eni (sm)
+      ppc = S.cw / visibleW;
+    } else {
+      ppc = S.ch / 260;
+    }
+    var f = Math.min(1, 0.65 * S.cw / (T.wCm * ppc), 0.65 * S.ch / (T.hCm * ppc));
+    ppc *= f;
+    S.k = ppc / S.cw;
+    S.scaleMul = 1;
+    S.pos = { x: 0.5, y: 0.45 };
+    S.rot = 0; S.yaw = 0; S.pitch = 0; S.light = 100;
+    ['arRot','arYaw','arPitch'].forEach(function (id) { $(id).value = 0; });
+    $('arLight').value = 100; $('arScale').value = 100;
+    $('arRotOut').textContent = '0°'; $('arYawOut').textContent = '0°'; $('arPitchOut').textContent = '0°';
+    $('arLightOut').textContent = '100%'; $('arScaleOut').textContent = '100%';
+    setMode('place');
   }
 
   function enterCalib() {
@@ -256,6 +284,7 @@
     S.calib.cm = cm;
     S.k = (len / cm) / S.cw;               // 1 sm = k * canvas eni
     S.pos = { x: 0.5, y: 0.5 };
+    S.scaleMul = 1; $('arScale').value = 100; $('arScaleOut').textContent = '100%';
     var ppc = S.k * S.cw;
     var gw = S.tex.wCm * ppc;
     setMode('place');
@@ -415,7 +444,7 @@
 
   function drawGlass(target, withLabel) {
     var T = S.tex; if (!T) return;
-    var ppc = S.k * S.cw;
+    var ppc = S.k * S.cw * S.scaleMul;
     var W = T.wCm * ppc, H = T.hCm * ppc;
     if (!(W > 1 && H > 1)) return;
     var cx = S.pos.x * S.cw, cy = S.pos.y * S.ch;
@@ -570,7 +599,7 @@
     $('arBtnCamera').addEventListener('click', startCamera);
     $('arBtnPhoto').addEventListener('click', function () { $('arFile').value = ''; $('arFile').click(); });
     $('arFile').addEventListener('change', function (e) { loadPhoto(e.target.files && e.target.files[0]); });
-    $('arBack').addEventListener('click', function () { stopStream(); S.src = null; S.photo = null; S.bg = null; S.video = null; layoutStage(); setMode('start'); });
+    $('arBack').addEventListener('click', function () { setMode('place'); });
     $('arCalibOk').addEventListener('click', confirmCalib);
     $('arRecalib').addEventListener('click', enterCalib);
     $('arSave').addEventListener('click', save);
@@ -594,6 +623,7 @@
         requestRender();
       });
     }
+    $('arScale').addEventListener('input', function (e) { S.scaleMul = Number(e.target.value) / 100; $('arScaleOut').textContent = e.target.value + '%'; requestRender(); });
     slider('arRot', 'arRotOut', 'rot', function (v) { return v + '°'; });
     slider('arYaw', 'arYawOut', 'yaw', function (v) { return v + '°'; });
     slider('arPitch', 'arPitchOut', 'pitch', function (v) { return v + '°'; });
