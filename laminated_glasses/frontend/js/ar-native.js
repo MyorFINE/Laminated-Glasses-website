@@ -52,7 +52,7 @@ export function buildArtwork(spec, o, flags) {
   spec.panes.forEach((p, i) => {
     const w = widths[i], h = heights[i];
     const tex = new THREE.CanvasTexture(p.canvas);
-    tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 16;
     const frontMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38, metalness: 0 });
     const front = new THREE.Mesh(new THREE.PlaneGeometry(w, h), frontMat);
     front.position.set(x + w / 2, 0, so + th + 0.0005);
@@ -96,7 +96,7 @@ export async function buildQuickLookUrl(spec, o) {
   const options = {
     ar: { anchoring: { type: 'plane' }, planeAnchoring: { alignment: 'vertical' } },   // DEVORGA biriktirish
     quickLookCompatible: true,
-    maxTextureSize: 2048,
+    maxTextureSize: 4096,
   };
   let data = exporter.parse(scene, options);
   if (data && typeof data.then === 'function') data = await data;

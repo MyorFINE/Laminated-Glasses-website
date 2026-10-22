@@ -93,16 +93,20 @@
       '</div>' +
       '<div class="ar-panel" id="arPanel" hidden>' +
         '<div class="ar-step" id="arStepPlace">' +
-          '<div class="ar-sliders">' +
-            '<label><span id="arDistLabel">Devorgacha masofa</span> <output id="arDistOut">2 m</output><input type="range" id="arDist" min="0.8" max="6" step="0.1" value="2"></label>' +
-            '<label>Burilish <output id="arRotOut">0°</output><input type="range" id="arRot" min="-15" max="15" step="0.5" value="0"></label>' +
-            '<label>Yon perspektiva <output id="arYawOut">0°</output><input type="range" id="arYaw" min="-45" max="45" step="1" value="0"></label>' +
-            '<label>Yuqori / past <output id="arPitchOut">0°</output><input type="range" id="arPitch" min="-30" max="30" step="1" value="0"></label>' +
-            '<label>Yorug\'lik <output id="arLightOut">100%</output><input type="range" id="arLight" min="55" max="100" step="1" value="100"></label>' +
-          '</div>' +
-          '<div class="ar-actions ar-actions-wrap">' +
+          '<label class="ar-main-slider"><span id="arDistLabel">Devorgacha masofa</span> <output id="arDistOut">2 m</output><input type="range" id="arDist" min="0.8" max="6" step="0.1" value="2"></label>' +
+          '<button type="button" class="ar-more-btn" id="arMoreBtn" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Sozlamalar</button>' +
+          '<div class="ar-more" id="arMore">' +
+            '<div class="ar-sliders">' +
+              '<label>Burilish <output id="arRotOut">0°</output><input type="range" id="arRot" min="-15" max="15" step="0.5" value="0"></label>' +
+              '<label>Yon perspektiva <output id="arYawOut">0°</output><input type="range" id="arYaw" min="-45" max="45" step="1" value="0"></label>' +
+              '<label>Yuqori / past <output id="arPitchOut">0°</output><input type="range" id="arPitch" min="-30" max="30" step="1" value="0"></label>' +
+              '<label>Yorug\'lik <output id="arLightOut">100%</output><input type="range" id="arLight" min="55" max="100" step="1" value="100"></label>' +
+            '</div>' +
             '<label class="ar-check"><input type="checkbox" id="arShowDim" checked> O\'lchamni ko\'rsatish</label>' +
             '<label class="ar-check" id="arGyroRow" hidden><input type="checkbox" id="arGyro" checked> Devorga qotirish (telefonni burganda oyna joyida turadi)</label>' +
+            '<button type="button" class="ar-link" id="arResetAdj">Sozlamalarni tiklash</button>' +
+          '</div>' +
+          '<div class="ar-actions">' +
             '<button type="button" class="ar-btn" id="arSource">Boshqa rasm / kamera</button>' +
             '<button type="button" class="ar-btn ar-btn-main" id="arSave">Rasmni saqlash</button>' +
           '</div>' +
@@ -273,7 +277,7 @@
       if (!S) return;
       stopStream();
       S.src = 'photo'; S.photo = img; S.video = null; S.gyroOn = false;
-      var msc = Math.min(1, 3000 / Math.max(img.naturalWidth, img.naturalHeight));
+      var msc = Math.min(1, 4096 / Math.max(img.naturalWidth, img.naturalHeight));
       if (msc < 1) {
         var pc = document.createElement('canvas');
         pc.width = Math.round(img.naturalWidth * msc); pc.height = Math.round(img.naturalHeight * msc);
@@ -315,6 +319,7 @@
     $('arStart').hidden = (m !== 'start');
     $('arPanel').hidden = (m === 'start');
     $('arZoom').hidden = (m !== 'place');
+    root.classList.toggle('has-panel', m === 'place');
     var hint = $('arHint');
     if (m === 'place') {
       hint.hidden = false;
@@ -330,7 +335,7 @@
     if (!S || !canvas) return;
     var b = $('arStageBox');
     var box = { w: Math.max(120, b.clientWidth), h: Math.max(120, b.clientHeight) };
-    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var dpr = Math.min(S.src === 'video' ? 2 : 3, window.devicePixelRatio || 1);   // jonli kamerada 2, rasmda 3 (aniqroq)
     var w = box.w, h = box.h;
     if (S.src === 'photo' && S.photo) {
       var sc = Math.min(box.w / S.photo.naturalWidth, box.h / S.photo.naturalHeight);
@@ -447,6 +452,23 @@
     c.restore();
   }
 
+  /* Tekstura "mip" darajalari: katta rasmni ekranga bir yo'la kichraytirsak tishlanadi — avval 2 barobardan kichraytirib boramiz */
+  function pickLevel(T, wantW) {
+    if (!T.levels) T.levels = [T.canvas];
+    var lv = T.levels, i = 0;
+    while (lv[i].width / 2 >= wantW && lv[i].width > 64) {
+      if (!lv[i + 1]) {
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(lv[i].width / 2)); c.height = Math.max(1, Math.round(lv[i].height / 2));
+        var cx = c.getContext('2d'); cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
+        cx.drawImage(lv[i], 0, 0, c.width, c.height);
+        lv[i + 1] = c;
+      }
+      i++;
+    }
+    return lv[i];
+  }
+
   function drawGlass(target) {
     var T = S.tex; if (!T) return;
     var k = ppc() * S.z;                       // zoom bilan birga oyna ham kattalashadi — masshtab saqlanadi
@@ -496,7 +518,7 @@
       });
     }
 
-    var tc = T.canvas;
+    var tc = pickLevel(T, W * S.dpr);
     if (!tilted) {
       octx.save();
       octx.translate(cx, cy); octx.rotate(S.rot * Math.PI / 180);
@@ -625,7 +647,7 @@
   async function save() {
     if (!S || S.mode !== 'place') return;
     render();
-    var blob = await new Promise(function (res) { canvas.toBlob(res, 'image/jpeg', 0.92); });
+    var blob = await new Promise(function (res) { canvas.toBlob(res, 'image/jpeg', 0.95); });
     if (!blob) { toast("Rasmni saqlab bo'lmadi.", true); return; }
     var name = 'oyna-xonada-' + new Date().toISOString().slice(0, 10) + '.jpg';
     try {
@@ -655,6 +677,17 @@
       $('arGyroRow').hidden = true; layoutStage(); setMode('start');
     });
     $('arSave').addEventListener('click', save);
+    $('arMoreBtn').addEventListener('click', function () {
+      var m = $('arMore'), open = !m.classList.contains('open');
+      m.classList.toggle('open', open); this.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    $('arResetAdj').addEventListener('click', function () {
+      S.rot = 0; S.yaw = 0; S.pitch = 0; S.light = 100;
+      [['arRot','arRotOut','0°'],['arYaw','arYawOut','0°'],['arPitch','arPitchOut','0°'],['arLight','arLightOut','100%']].forEach(function (a) {
+        $(a[0]).value = a[0] === 'arLight' ? 100 : 0; $(a[1]).textContent = a[2];
+      });
+      requestRender();
+    });
 
     function slider(id, outId, key, fmt) {
       $(id).addEventListener('input', function (e) { S[key] = Number(e.target.value); $(outId).textContent = fmt(S[key]); requestRender(); });
