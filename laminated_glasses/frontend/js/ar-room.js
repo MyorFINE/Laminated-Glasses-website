@@ -27,6 +27,7 @@
   var gyroPerm = null;                    // iOS uchun ruxsat va'dasi (bosish paytida so'raladi)
 
   var FIT = 0.65;                         // oyna kadrning eng ko'pi bilan shu ulushi
+  var MAXZ = 8;                           // eng katta kattalashtirish
   var THICK_CM = 0.8;                     // laminatsiyalangan shisha qalinligi
 
   function round1(n) { return Math.round(n * 10) / 10; }
@@ -55,9 +56,25 @@
           '<div class="ar-start-card">' +
             '<h3>Oynani xonangizda ko\'ring</h3>' +
             '<p>Oyna devorga o\'zi joylashadi va xona ichida real ko\'rinadi.</p>' +
+            '<div class="ar-native" id="arNative" hidden>' +
+              '<button type="button" class="ar-btn ar-btn-main" id="arBtnNative">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>' +
+                '<span>AR: devorga o\'rnatib ko\'rish</span>' +
+              '</button>' +
+              '<a class="ar-btn ar-btn-main ar-ql" id="arQL" rel="ar" hidden><img id="arQLImg" alt="" width="34" height="34"><span id="arQLText">AR tayyorlanmoqda…</span></a>' +
+              '<ol class="ar-steps"><li>Xona yoritilgan bo\'lsin, devorda biroz tekstura yoki rozetka/burchak ko\'rinsin.</li><li>Telefonni sekin harakatlantirib devorni skanerlang.</li><li>Devor aniqlangach, oyna o\'sha joyga haqiqiy o\'lchamda o\'rnatiladi.</li></ol>' +
+              '<details class="ar-opts"><summary>AR sozlamalari</summary>' +
+                '<div class="ar-opts-grid">' +
+                  '<label>Panellar oralig\'i (sm)<input type="number" id="arOptGap" min="0" max="20" step="0.5" value="2" inputmode="decimal"></label>' +
+                  '<label>Panel qalinligi (sm)<input type="number" id="arOptThick" min="0.3" max="10" step="0.1" value="0.8" inputmode="decimal"></label>' +
+                  '<label>Devordan masofa (sm)<input type="number" id="arOptStand" min="0" max="10" step="0.5" value="1" inputmode="decimal"></label>' +
+                '</div>' +
+              '</details>' +
+              '<div class="ar-or">yoki oddiy rejim</div>' +
+            '</div>' +
             '<button type="button" class="ar-btn ar-btn-main" id="arBtnCamera">' +
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>' +
-              'Jonli kamera' +
+              'Jonli kamera (oddiy rejim)' +
             '</button>' +
             '<button type="button" class="ar-btn" id="arBtnPhoto">' +
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>' +
@@ -67,6 +84,12 @@
           '</div>' +
         '</div>' +
         '<div class="ar-hint" id="arHint" hidden></div>' +
+        '<div class="ar-zoom" id="arZoom" hidden>' +
+          '<button type="button" id="arZoomIn" aria-label="Kattalashtirish">+</button>' +
+          '<button type="button" id="arZoomOutBtn" aria-label="Kichraytirish">−</button>' +
+          '<button type="button" id="arZoomReset" aria-label="Asl holat">⟲</button>' +
+          '<span id="arZoomVal">×1</span>' +
+        '</div>' +
       '</div>' +
       '<div class="ar-panel" id="arPanel" hidden>' +
         '<div class="ar-step" id="arStepPlace">' +
@@ -102,6 +125,7 @@
       pos: { x: 0.5, y: 0.45 },
       rot: 0, yaw: 0, pitch: 0, light: 100, showDim: true,
       tex: null, quad: null, drag: null, raf: 0, loop: 0,
+      z: 1, tx: 0, ty: 0, ptrs: {}, pinch: null, photoSrc: null,   // ko'rinish: kattalashtirish va siljitish
       gyroOn: false, gyroCur: null, gyroBase: null,
     };
   }
@@ -143,13 +167,15 @@
     root.hidden = false;
     document.body.classList.add('ar-lock');
     requestAnimationFrame(function () { root.classList.add('open'); layoutStage(); });
-    if (isTouchDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) startCamera();
+    await setupNative();                 // haqiqiy AR (devor aniqlash) mavjudmi?
+    if (S && !S.native && isTouchDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) startCamera();
   }
 
   function close() {
     if (!root || root.hidden) return;
     stopStream();
     if (S) { cancelAnimationFrame(S.raf); S.raf = 0; S.gyroOn = false; }
+    if (S && S.qlUrl) { URL.revokeObjectURL(S.qlUrl); S.qlUrl = null; }
     root.classList.remove('open');
     root.hidden = true;
     document.body.classList.remove('ar-lock');
@@ -247,6 +273,13 @@
       if (!S) return;
       stopStream();
       S.src = 'photo'; S.photo = img; S.video = null; S.gyroOn = false;
+      var msc = Math.min(1, 3000 / Math.max(img.naturalWidth, img.naturalHeight));
+      if (msc < 1) {
+        var pc = document.createElement('canvas');
+        pc.width = Math.round(img.naturalWidth * msc); pc.height = Math.round(img.naturalHeight * msc);
+        var pctx = pc.getContext('2d'); pctx.imageSmoothingQuality = 'high'; pctx.drawImage(img, 0, 0, pc.width, pc.height);
+        S.photoSrc = pc;
+      } else S.photoSrc = img;
       $('arGyroRow').hidden = true;
       layoutStage();
       autoPlace();
@@ -257,6 +290,7 @@
 
   /* -------------------------------------------------- avtomatik joylashtirish */
   function autoPlace() {
+    S.z = 1; S.tx = 0; S.ty = 0; syncZoomUi();
     setMode('place');                                                 // avval panel -> canvas yakuniy o'lchamga keladi
     var base;
     if (S.src === 'video') base = 2;                                  // devordan ~2 m
@@ -280,12 +314,13 @@
     S.mode = m;
     $('arStart').hidden = (m !== 'start');
     $('arPanel').hidden = (m === 'start');
+    $('arZoom').hidden = (m !== 'place');
     var hint = $('arHint');
     if (m === 'place') {
       hint.hidden = false;
       hint.textContent = S.src === 'video'
-        ? "Oyna devorga qo'yildi. Kerak bo'lsa barmoq bilan suring."
-        : "Oyna avtomatik qo'yildi. Qo'ymoqchi bo'lgan joyni bosing — oyna o'sha yerga o'tadi.";
+        ? "Oynani suring. Ikki barmoq bilan kattalashtiring, bo'sh joyni sudrab xonani siljiting."
+        : "Bo'sh joyni bossangiz oyna o'sha yerga o'tadi. G'ildirak yoki +/− bilan kattalashtiring, sudrab siljiting.";
     } else hint.hidden = true;
     layoutStage();            // panel chiqdi/yo'qoldi -> maydon o'zgardi: canvas'ni yangi maydonga to'g'ri (siqmasdan) moslaymiz
   }
@@ -302,18 +337,11 @@
       w = Math.max(80, Math.round(S.photo.naturalWidth * sc));
       h = Math.max(80, Math.round(S.photo.naturalHeight * sc));
     }
-    if (S.cw === w && S.ch === h && S.dpr === dpr && canvas.width === Math.round(w * dpr) && (S.src !== 'photo' || S.bgFor === S.photo)) { requestRender(); return; }
+    if (S.cw === w && S.ch === h && S.dpr === dpr && canvas.width === Math.round(w * dpr)) { requestRender(); return; }
     S.cw = w; S.ch = h; S.dpr = dpr;
     canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
-    if (S.src === 'photo' && S.photo) {
-      var bg = document.createElement('canvas');
-      bg.width = canvas.width; bg.height = canvas.height;
-      var bctx = bg.getContext('2d');
-      bctx.imageSmoothingQuality = 'high';
-      bctx.drawImage(S.photo, 0, 0, bg.width, bg.height);
-      S.bg = bg; S.bgFor = S.photo;
-    }
+    clampView();
     requestRender();
   }
 
@@ -333,16 +361,33 @@
     ctx.setTransform(S.dpr, 0, 0, S.dpr, 0, 0);
     ctx.fillStyle = '#0b1c2a';
     ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.translate(S.tx, S.ty); ctx.scale(S.z, S.z);       // fon ham, oyna ham SHU ko'rinish bilan birga kattalashadi
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     if (S.src === 'video' && S.video && S.video.videoWidth) {
       var vw = S.video.videoWidth, vh = S.video.videoHeight;
       var sc = Math.max(W / vw, H / vh);
       ctx.drawImage(S.video, (W - vw * sc) / 2, (H - vh * sc) / 2, vw * sc, vh * sc);
-    } else if (S.src === 'photo' && S.bg) {
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.drawImage(S.bg, 0, 0);
-      ctx.setTransform(S.dpr, 0, 0, S.dpr, 0, 0);
+    } else if (S.src === 'photo' && S.photoSrc) {
+      ctx.drawImage(S.photoSrc, 0, 0, W, H);
     }
+    ctx.restore();
   }
+
+  /* ---------------------------------------------------- kattalashtirish / siljitish */
+  function clampView() {
+    S.z = clamp(S.z, 1, MAXZ);
+    S.tx = clamp(S.tx, S.cw * (1 - S.z), 0);
+    S.ty = clamp(S.ty, S.ch * (1 - S.z), 0);
+  }
+  function syncZoomUi() { var v = $('arZoomVal'); if (v && S) v.textContent = '×' + (Math.round(S.z * 10) / 10); }
+  function zoomAt(px, py, factor) {
+    var sx = (px - S.tx) / S.z, sy = (py - S.ty) / S.z;
+    S.z = clamp(S.z * factor, 1, MAXZ);
+    S.tx = px - sx * S.z; S.ty = py - sy * S.z;
+    clampView(); syncZoomUi(); requestRender();
+  }
+  function toScene(p) { return { x: (p.x - S.tx) / S.z, y: (p.y - S.ty) / S.z }; }
 
   function render() {
     if (!S || !ctx || !S.cw) return;
@@ -404,10 +449,10 @@
 
   function drawGlass(target) {
     var T = S.tex; if (!T) return;
-    var k = ppc();
+    var k = ppc() * S.z;                       // zoom bilan birga oyna ham kattalashadi — masshtab saqlanadi
     var W = T.wCm * k, H = T.hCm * k;
     if (!(W > 1 && H > 1)) return;
-    var cx = S.pos.x * S.cw, cy = S.pos.y * S.ch;
+    var cx = S.pos.x * S.cw * S.z + S.tx, cy = S.pos.y * S.ch * S.z + S.ty;
     var P = makeProjector(cx, cy, W, H, S.rot, S.yaw, S.pitch);
     var q = [P(0, 0), P(1, 0), P(1, 1), P(0, 1)];
     S.quad = q;
@@ -419,8 +464,11 @@
     q.concat(back || []).forEach(function (p) { minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]); minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]); });
     var blur = Math.min(36, Math.max(8, Math.min(W, H) * 0.06));
     var pad = Math.ceil(blur * 2.2);
-    var bx = Math.floor(minX - pad), by = Math.floor(minY - pad);
-    var bw = Math.min(6000, Math.ceil(maxX - minX + pad * 2)), bh = Math.min(6000, Math.ceil(maxY - minY + pad * 2));
+    // faqat ekranda ko'rinadigan qismini chizamiz (kattalashtirilganda xotira/tezlik uchun)
+    var x0 = Math.max(Math.floor(minX - pad), -pad), y0 = Math.max(Math.floor(minY - pad), -pad);
+    var x1 = Math.min(Math.ceil(maxX + pad), S.cw + pad), y1 = Math.min(Math.ceil(maxY + pad), S.ch + pad);
+    if (x1 <= x0 || y1 <= y0) return;
+    var bx = x0, by = y0, bw = x1 - x0, bh = y1 - y0;
 
     var dpr = S.dpr;
     var ow = Math.max(1, Math.round(bw * dpr)), oh = Math.max(1, Math.round(bh * dpr));
@@ -507,28 +555,70 @@
     var r = canvas.getBoundingClientRect();
     return { x: (e.clientX - r.left) * (S.cw / r.width), y: (e.clientY - r.top) * (S.ch / r.height) };
   }
+  function startPinch() {
+    var ids = Object.keys(S.ptrs).slice(0, 2);
+    var a = S.ptrs[ids[0]], b = S.ptrs[ids[1]];
+    var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    S.pinch = { ids: ids, d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: S.z, sx: (mx - S.tx) / S.z, sy: (my - S.ty) / S.z };
+  }
+  function updatePinch() {
+    var pc = S.pinch, a = S.ptrs[pc.ids[0]], b = S.ptrs[pc.ids[1]];
+    if (!a || !b) return;
+    S.z = clamp(pc.z0 * Math.hypot(a.x - b.x, a.y - b.y) / pc.d0, 1, MAXZ);
+    S.tx = (a.x + b.x) / 2 - pc.sx * S.z; S.ty = (a.y + b.y) / 2 - pc.sy * S.z;
+    clampView(); syncZoomUi(); requestRender();
+  }
+
   function onDown(e) {
     if (!S || S.mode !== 'place') return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
     canvas.setPointerCapture(e.pointerId);
     var p = pointer(e);
-    if (pointInQuad(p)) S.drag = { dx: S.pos.x * S.cw - p.x, dy: S.pos.y * S.ch - p.y };
-    else { S.pos.x = clamp(p.x / S.cw, 0, 1); S.pos.y = clamp(p.y / S.ch, 0, 1); S.drag = { dx: 0, dy: 0 }; }
-    requestRender();
+    S.ptrs[e.pointerId] = p;
+    if (Object.keys(S.ptrs).length >= 2) { S.drag = null; startPinch(); return; }
+    if (pointInQuad(p)) {
+      var sc = toScene(p);
+      S.drag = { t: 'glass', dx: S.pos.x * S.cw - sc.x, dy: S.pos.y * S.ch - sc.y };         // oynani siljitish
+    } else {
+      S.drag = { t: 'bg', sx: p.x, sy: p.y, tx: S.tx, ty: S.ty, moved: false };              // bosish = qo'yish, sudrash = xonani siljitish
+    }
   }
   function onMove(e) {
-    if (!S || !S.drag) return;
+    if (!S) return;
     var p = pointer(e);
-    S.pos.x = clamp((p.x + S.drag.dx) / S.cw, 0, 1);
-    S.pos.y = clamp((p.y + S.drag.dy) / S.ch, 0, 1);
+    if (S.ptrs[e.pointerId]) S.ptrs[e.pointerId] = p;
+    if (S.pinch) { updatePinch(); return; }
+    var d = S.drag; if (!d) return;
+    if (d.t === 'glass') {
+      var sc = toScene(p);
+      S.pos.x = clamp((sc.x + d.dx) / S.cw, 0, 1); S.pos.y = clamp((sc.y + d.dy) / S.ch, 0, 1);
+    } else {
+      if (!d.moved && Math.hypot(p.x - d.sx, p.y - d.sy) < 6) return;
+      d.moved = true;
+      S.tx = d.tx + (p.x - d.sx); S.ty = d.ty + (p.y - d.sy);
+      clampView();
+    }
     requestRender();
   }
   function onUp(e) {
     if (!S) return;
-    if (S.drag) rebase();                        // yangi joy giroskop uchun "devordagi nuqta" bo'ladi
+    var d = S.drag;
+    if (d && d.t === 'bg' && !d.moved && !S.pinch) {          // oddiy bosish: oyna o'sha joyga o'tadi
+      var sc = toScene(pointer(e));
+      S.pos.x = clamp(sc.x / S.cw, 0, 1); S.pos.y = clamp(sc.y / S.ch, 0, 1);
+      rebase(); requestRender();
+    } else if (d && d.t === 'glass') rebase();                // yangi joy giroskop uchun "devordagi nuqta" bo'ladi
+    delete S.ptrs[e.pointerId];
+    if (Object.keys(S.ptrs).length < 2) S.pinch = null;
     S.drag = null;
     try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+  }
+  function onWheel(e) {
+    if (!S || S.mode !== 'place') return;
+    e.preventDefault();
+    var p = pointer(e);
+    zoomAt(p.x, p.y, Math.exp(-e.deltaY * 0.0015));
   }
 
   /* --------------------------------------------------------------- saqlash */
@@ -556,6 +646,7 @@
   /* ---------------------------------------------------------------- tadbirlar */
   function bind() {
     $('arClose').addEventListener('click', close);
+    $('arBtnNative').addEventListener('click', launchNative);
     $('arBtnCamera').addEventListener('click', function () { gyroPerm = requestGyro(); startCamera(); });
     $('arBtnPhoto').addEventListener('click', function () { $('arFile').value = ''; $('arFile').click(); });
     $('arFile').addEventListener('change', function (e) { loadPhoto(e.target.files && e.target.files[0]); });
@@ -576,6 +667,10 @@
     $('arShowDim').addEventListener('change', function (e) { S.showDim = e.target.checked; requestRender(); });
     $('arGyro').addEventListener('change', function (e) { S.gyroOn = e.target.checked; rebase(); });
 
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    $('arZoomIn').addEventListener('click', function () { if (S) zoomAt(S.cw / 2, S.ch / 2, 1.4); });
+    $('arZoomOutBtn').addEventListener('click', function () { if (S) zoomAt(S.cw / 2, S.ch / 2, 1 / 1.4); });
+    $('arZoomReset').addEventListener('click', function () { if (S) { S.z = 1; S.tx = 0; S.ty = 0; syncZoomUi(); requestRender(); } });
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerup', onUp);
@@ -588,6 +683,98 @@
     document.addEventListener('visibilitychange', function () {
       if (document.hidden && S && S.src === 'video') { stopStream(); S.src = null; S.gyroOn = false; $('arGyroRow').hidden = true; setMode('start'); }
     });
+  }
+
+  /* ====================================================== HAQIQIY AR (devor aniqlash) */
+  async function detectNative() {
+    try {
+      var ua = navigator.userAgent || '';
+      var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (isIOS) {
+        var a = document.createElement('a');
+        return (a.relList && a.relList.supports && a.relList.supports('ar')) ? 'quicklook' : null;   // AR Quick Look
+      }
+      if (navigator.xr && navigator.xr.isSessionSupported && await navigator.xr.isSessionSupported('immersive-ar')) return 'webxr';
+    } catch (e) {}
+    return null;
+  }
+
+  function readNativeOpts() {
+    function num(id, def, a, b) { var v = parseFloat($(id).value); if (!isFinite(v)) v = def; return clamp(v, a, b); }
+    return { gapCm: num('arOptGap', 2, 0, 20), thickCm: num('arOptThick', 0.8, 0.3, 10), standoffCm: num('arOptStand', 1, 0, 10) };
+  }
+
+  // Har bir panel uchun alohida tekstura va haqiqiy o'lcham (sm)
+  function paneSpecs() {
+    var T = S.tex, W = T.canvas.width, H = T.canvas.height;
+    return T.rects.map(function (r, i) {
+      var x = Math.round(r.u0 * W), y = Math.round(r.v0 * H), w = Math.max(1, Math.round((r.u1 - r.u0) * W)), h = Math.max(1, Math.round((r.v1 - r.v0) * H));
+      var c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(T.canvas, x, y, w, h, 0, 0, w, h);
+      return { canvas: c, wCm: T.panes[i].wCm, hCm: T.panes[i].hCm };
+    });
+  }
+  function thumbUrl() {
+    var T = S.tex, sc = 68 / T.canvas.height, c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(T.canvas.width * sc)); c.height = 68;
+    c.getContext('2d').drawImage(T.canvas, 0, 0, c.width, c.height);
+    return c.toDataURL('image/png');
+  }
+
+  async function setupNative() {
+    var box = $('arNative');
+    box.hidden = true;
+    S.native = await detectNative();
+    if (!S || !S.native) return;
+    // three.js modulini oldindan yuklaymiz (bosish paytida kechikish bo'lmasin)
+    S.nativeMod = import('/js/ar-native.js').catch(function () { return null; });
+    var mod = await S.nativeMod;
+    if (!S) return;
+    if (!mod) { S.native = null; return; }      // modul/CDN yuklanmadi — oddiy rejim qoladi
+    box.hidden = false;
+    var btn = $('arBtnNative'), ql = $('arQL');
+    if (S.native === 'quicklook') {
+      btn.hidden = true; ql.hidden = false;
+      $('arQLImg').src = thumbUrl();
+      prepareQuickLook();
+      ['arOptGap', 'arOptThick', 'arOptStand'].forEach(function (id) { $(id).addEventListener('change', prepareQuickLook); });
+    } else {
+      btn.hidden = false; ql.hidden = true;
+    }
+  }
+
+  // iPhone: USDZ'ni oldindan tayyorlab, haqiqiy havolaga (rel="ar") ulaymiz — foydalanuvchi aynan shu havolani bosadi
+  async function prepareQuickLook() {
+    if (!S) return;
+    var ql = $('arQL'), txt = $('arQLText');
+    var my = S.qlToken = (S.qlToken || 0) + 1;
+    ql.classList.add('is-busy'); ql.removeAttribute('href'); txt.textContent = 'AR tayyorlanmoqda…';
+    try {
+      var mod = await S.nativeMod;
+      var url = await mod.buildQuickLookUrl({ panes: paneSpecs(), label: S.tex.label }, readNativeOpts());
+      if (!S || my !== S.qlToken) { URL.revokeObjectURL(url); return; }
+      if (S.qlUrl) URL.revokeObjectURL(S.qlUrl);
+      S.qlUrl = url;
+      ql.href = url + '#allowsContentScaling=0';        // pinch bilan o'lchamni buzib bo'lmasin
+      ql.classList.remove('is-busy');
+      txt.textContent = "AR: devorga o'rnatib ko'rish";
+    } catch (e) {
+      if (S && my === S.qlToken) { txt.textContent = 'AR tayyorlab bo\'lmadi — oddiy rejimdan foydalaning'; }
+    }
+  }
+
+  async function launchNative() {
+    if (!S || S.native !== 'webxr') return;
+    var mod = await S.nativeMod;
+    if (!mod) { toast("AR moduli yuklanmadi. Oddiy rejimdan foydalaning.", true); return; }
+    try {
+      await mod.launchWebXR({ panes: paneSpecs(), label: S.tex.label }, readNativeOpts());
+    } catch (e) {
+      var n = e && e.name;
+      toast((n === 'NotAllowedError' || n === 'SecurityError')
+        ? "AR uchun kamera ruxsati kerak. Ruxsat bering yoki oddiy rejimdan foydalaning."
+        : "AR ishga tushmadi. Oddiy rejimdan foydalaning.", true);
+    }
   }
 
   document.addEventListener('DOMContentLoaded', function () {

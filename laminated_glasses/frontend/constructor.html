@@ -14,6 +14,8 @@
 <link rel="stylesheet" href="/css/dialogs.css" />
 <link rel="stylesheet" href="/css/theme.css" />
 <link rel="stylesheet" href="/css/ar-room.css" />
+<!-- Haqiqiy AR (js/ar-native.js) uchun: three.js faqat AR ochilganda yuklanadi -->
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <style>
   .constructor-grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:26px;align-items:start;}
   @media (max-width:860px){.constructor-grid{grid-template-columns:1fr;}}
@@ -1628,7 +1630,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     });
 
     const size = selectedSize();
-    return { canvas, wCm: totalW, hCm: maxH, rects, label: size ? size.label : '' };
+    return { canvas, wCm: totalW, hCm: maxH, rects, panes: panes.map(p => ({ wCm: p.w, hCm: p.h })), label: size ? size.label : '' };
   }
   window.lgConstructorAR = {
     isReady: () => !!(state.imageSrc && state.work && getPanes().length),

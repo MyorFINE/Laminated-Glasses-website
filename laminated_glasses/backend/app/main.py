@@ -80,7 +80,7 @@ async def add_security_headers(request, call_next):
     # Clickjacking: sayt boshqa saytning iframe'iga joylanmasin.
     h["X-Frame-Options"] = "SAMEORIGIN"
     # camera=(self): "Xonada ko'rish" (AR) faqat shu saytning o'zida kamerani ishlata oladi.
-    h["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=(), payment=()"
+    h["Permissions-Policy"] = "camera=(self), xr-spatial-tracking=(self), microphone=(), geolocation=(), payment=()"
     h["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"  # Google kirish oynasi uchun
     # HTTPS orqali kirilganda brauzer keyingi safar ham faqat HTTPS ishlatsin.
     proto = request.headers.get("x-forwarded-proto", request.url.scheme)

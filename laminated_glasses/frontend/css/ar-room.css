@@ -74,3 +74,42 @@ body.ar-lock{overflow:hidden;}
 
 /* AR oynasi ustida toast ko'rinib tursin */
 .toast{z-index:2100 !important;}
+
+/* kattalashtirish tugmalari */
+.ar-zoom{position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:3;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.ar-zoom[hidden]{display:none;}
+.ar-zoom button{width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(6,28,44,.78);backdrop-filter:blur(6px);color:#fff;font-size:1.25rem;font-weight:700;line-height:1;cursor:pointer;}
+.ar-zoom button:hover{background:rgba(47,143,209,.9);}
+.ar-zoom span{padding:3px 8px;border-radius:999px;background:rgba(6,28,44,.78);font-size:.72rem;font-weight:800;font-variant-numeric:tabular-nums;}
+
+/* Haqiqiy AR bo'limi */
+.ar-native{display:flex;flex-direction:column;gap:10px;text-align:left;}
+.ar-native[hidden],.ar-ql[hidden]{display:none;}
+.ar-ql{text-decoration:none;}
+.ar-ql img{border-radius:6px;background:#fff;object-fit:contain;}
+.ar-ql.is-busy{opacity:.65;pointer-events:none;}
+.ar-steps{margin:2px 0 0;padding-left:20px;font-size:.8rem;line-height:1.5;color:rgba(255,255,255,.75);}
+.ar-opts{font-size:.82rem;color:rgba(255,255,255,.85);}
+.ar-opts summary{cursor:pointer;font-weight:700;padding:4px 0;}
+.ar-opts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;}
+.ar-opts-grid label{display:flex;flex-direction:column;gap:4px;font-size:.72rem;font-weight:700;}
+.ar-opts-grid input{width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font:700 .9rem var(--font-body,inherit);}
+.ar-or{text-align:center;font-size:.74rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+.ar-start{overflow:auto;}
+.ar-start-card{margin:auto;}
+
+/* WebXR (Android) — kamera ustidagi interfeys */
+.ar-xr-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:2500;}
+.ar-xr-ui{position:fixed;inset:0;z-index:2600;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none;color:#fff;font-family:var(--font-body,system-ui,sans-serif);padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);}
+.ar-xr-ui > *{pointer-events:auto;}
+.ar-xr-status{margin:12px 56px 0 12px;align-self:flex-start;padding:10px 14px;border-radius:14px;background:rgba(6,28,44,.82);font-size:.82rem;font-weight:600;line-height:1.45;max-width:min(520px,100% - 80px);}
+.ar-xr-x{position:absolute;right:12px;top:12px;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(6,28,44,.82);color:#fff;font-size:1rem;}
+.ar-xr-bar{margin:0 12px 14px;padding:12px 14px;border-radius:16px;background:rgba(6,28,44,.86);}
+.ar-xr-bar[hidden]{display:none;}
+.ar-xr-bar label{display:block;position:relative;font-size:.78rem;font-weight:700;}
+.ar-xr-bar output{position:absolute;right:0;top:0;color:#8fd0ff;}
+.ar-xr-bar input[type=range]{width:100%;height:30px;margin:2px 0 6px;accent-color:#2f8fd1;}
+.ar-xr-btns{display:flex;gap:10px;}
+.ar-xr-btns button{flex:1;padding:11px;border-radius:12px;border:1.5px solid rgba(255,255,255,.28);background:rgba(255,255,255,.1);color:#fff;font:700 .88rem var(--font-body,inherit);}
+.ar-xr-btns button:last-child{background:#2f8fd1;border-color:#2f8fd1;}
+@media (max-width:420px){.ar-opts-grid{grid-template-columns:1fr;}}
