@@ -257,6 +257,7 @@
 
   /* -------------------------------------------------- avtomatik joylashtirish */
   function autoPlace() {
+    setMode('place');                                                 // avval panel -> canvas yakuniy o'lchamga keladi
     var base;
     if (S.src === 'video') base = 2;                                  // devordan ~2 m
     else base = clamp(2.6 * S.cw / S.ch, 2, 6);                       // rasm balandligi ~2.6 m (shift)
@@ -272,7 +273,7 @@
     [['arRot','arRotOut','0°'],['arYaw','arYawOut','0°'],['arPitch','arPitchOut','0°']].forEach(function (a) { $(a[0]).value = 0; $(a[1]).textContent = a[2]; });
     $('arLight').value = 100; $('arLightOut').textContent = '100%';
     S.gyroBase = null;
-    setMode('place');
+    requestRender();
   }
 
   function setMode(m) {
@@ -286,7 +287,7 @@
         ? "Oyna devorga qo'yildi. Kerak bo'lsa barmoq bilan suring."
         : "Oyna avtomatik qo'yildi. Qo'ymoqchi bo'lgan joyni bosing — oyna o'sha yerga o'tadi.";
     } else hint.hidden = true;
-    requestRender();
+    layoutStage();            // panel chiqdi/yo'qoldi -> maydon o'zgardi: canvas'ni yangi maydonga to'g'ri (siqmasdan) moslaymiz
   }
 
   /* -------------------------------------------------------------- canvas */
@@ -301,6 +302,7 @@
       w = Math.max(80, Math.round(S.photo.naturalWidth * sc));
       h = Math.max(80, Math.round(S.photo.naturalHeight * sc));
     }
+    if (S.cw === w && S.ch === h && S.dpr === dpr && canvas.width === Math.round(w * dpr) && (S.src !== 'photo' || S.bgFor === S.photo)) { requestRender(); return; }
     S.cw = w; S.ch = h; S.dpr = dpr;
     canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
@@ -310,7 +312,7 @@
       var bctx = bg.getContext('2d');
       bctx.imageSmoothingQuality = 'high';
       bctx.drawImage(S.photo, 0, 0, bg.width, bg.height);
-      S.bg = bg;
+      S.bg = bg; S.bgFor = S.photo;
     }
     requestRender();
   }
@@ -429,17 +431,21 @@
     octx.setTransform(dpr, 0, 0, dpr, -bx * dpr, -by * dpr);
     octx.imageSmoothingEnabled = true; octx.imageSmoothingQuality = 'high';
 
-    // Shisha qalinligi: yon qirralar (perspektivada ko'rinadi), keyin old yuz ustidan chiziladi
-    if (back) {
+    // Shisha qalinligi: har bir panelning yon qirralari (perspektivada ko'rinadi), old yuz ustidan chiziladi
+    if (tilted) {
       octx.lineJoin = 'round';
-      for (var e = 0; e < 4; e++) {
-        var e2 = (e + 1) % 4;
-        octx.beginPath();
-        octx.moveTo(q[e][0], q[e][1]); octx.lineTo(q[e2][0], q[e2][1]);
-        octx.lineTo(back[e2][0], back[e2][1]); octx.lineTo(back[e][0], back[e][1]); octx.closePath();
-        octx.fillStyle = 'rgba(176,222,212,0.95)'; octx.fill();
-        octx.strokeStyle = 'rgba(40,90,90,0.45)'; octx.lineWidth = 0.8; octx.stroke();
-      }
+      (T.rects || [{ u0: 0, u1: 1, v0: 0, v1: 1 }]).forEach(function (r) {
+        var f4 = [P(r.u0, r.v0), P(r.u1, r.v0), P(r.u1, r.v1), P(r.u0, r.v1)];
+        var b4 = [P(r.u0, r.v0, th), P(r.u1, r.v0, th), P(r.u1, r.v1, th), P(r.u0, r.v1, th)];
+        for (var e = 0; e < 4; e++) {
+          var e2 = (e + 1) % 4;
+          octx.beginPath();
+          octx.moveTo(f4[e][0], f4[e][1]); octx.lineTo(f4[e2][0], f4[e2][1]);
+          octx.lineTo(b4[e2][0], b4[e2][1]); octx.lineTo(b4[e][0], b4[e][1]); octx.closePath();
+          octx.fillStyle = 'rgba(176,222,212,0.95)'; octx.fill();
+          octx.strokeStyle = 'rgba(40,90,90,0.45)'; octx.lineWidth = 0.8; octx.stroke();
+        }
+      });
     }
 
     var tc = T.canvas;
@@ -575,6 +581,7 @@
     canvas.addEventListener('pointerup', onUp);
     canvas.addEventListener('pointercancel', onUp);
 
+    if (window.ResizeObserver) new ResizeObserver(function () { if (S && root && !root.hidden) layoutStage(); }).observe($('arStageBox'));
     window.addEventListener('resize', function () { if (S && root && !root.hidden) layoutStage(); });
     window.addEventListener('orientationchange', function () { setTimeout(function () { if (S && root && !root.hidden) layoutStage(); }, 250); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && root && !root.hidden) close(); });

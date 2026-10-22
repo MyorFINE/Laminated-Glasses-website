@@ -1581,45 +1581,54 @@ document.addEventListener("DOMContentLoaded",()=>{
   async function buildArTexture(){
     const panes = getPanes();
     if(!panes.length || !state.work) return null;
-    const totalW = panes.reduce((s,p)=>s+p.w,0);
+    const GAP_CM = 2;                                     // panellar orasidagi haqiqiy oraliq (devor ko'rinadi)
+    const n = panes.length;
+    const sumW = panes.reduce((s,p)=>s+p.w,0);
+    const totalW = sumW + GAP_CM * (n - 1);                // devordagi umumiy eni (oraliqlar bilan)
     const maxH = Math.max(...panes.map(p=>p.h));
     const ppc = Math.max(2, Math.min(12, 2600 / Math.max(totalW, maxH)));
-    const W = Math.max(1, Math.round(totalW * ppc)), H = Math.max(1, Math.round(maxH * ppc));
+    const gapPx = Math.round(GAP_CM * ppc);
+    const W0 = Math.max(1, Math.round(sumW * ppc));        // rasm oraliqsiz (konstruktordagi ko'rinishdek) joylashadi
+    const H = Math.max(1, Math.round(maxH * ppc));
+    const W = W0 + gapPx * (n - 1);
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
 
-    const L = layout(W, H);
+    const L = layout(W0, H);
     const layer = document.createElement('canvas');
-    layer.width = W; layer.height = H;
+    layer.width = W0; layer.height = H;
     const lctx = layer.getContext('2d');
     lctx.imageSmoothingEnabled = true; lctx.imageSmoothingQuality = 'high';
     lctx.drawImage(state.work, L.ox, L.oy, L.rw, L.rh);
-    applyAdjustPixels(lctx, W, H);
-    // Har bir panel ALOHIDA chiziladi: faqat o'z to'rtburchagi ichidagi rasm bo'lagi olinadi
-    // (rasmning panel chetidan tashqariga "davomi" umuman chiqmaydi). Panelning o'zi
-    // egallamagan joy SHAFFOF qoladi — devor ko'rinadi. Rasm joylashuvi (zoom/surish/
-    // moslash va filtrlar) konstruktordagi ko'rinish bilan aynan bir xil.
+    applyAdjustPixels(lctx, W0, H);
+
+    // Har bir panel ALOHIDA shisha bo'lagi: o'z rasm bo'lagi (chetidan tashqariga davom yo'q),
+    // orasida shaffof oraliq. Rasm joylashuvi (zoom/surish/moslash/filtrlar) konstruktordagi
+    // ko'rinish bilan bir xil. Pastroq panellarning ustki/pastki qismi shaffof qoladi.
     let xCm = 0;
     const lw = Math.max(1, Math.round(ppc * 0.12));
-    panes.forEach(p => {
-      const x = Math.round(xCm * ppc), w = Math.round(p.w * ppc), h = Math.round(p.h * ppc);
+    const rects = [];
+    panes.forEach((p, i) => {
+      const sx = Math.round(xCm * ppc);                    // rasmdagi (oraliqsiz) o'rni
+      const w = Math.round(p.w * ppc), h = Math.round(p.h * ppc);
+      const x = sx + gapPx * i;                            // devordagi (oraliqli) o'rni
       const y = Math.round((H - h) / 2);
-      ctx.fillStyle = '#ffffff';                       // "contain" rejimida rasm yetmagan joy oq
+      ctx.fillStyle = '#ffffff';                           // "contain" rejimida rasm yetmagan joy oq
       ctx.fillRect(x, y, w, h);
-      ctx.drawImage(layer, x, y, w, h, x, y, w, h);    // aynan shu panelga to'g'ri keladigan bo'lak
-      // shisha qirrasi: ichki yorug' chiziq + tashqi ingichka soya chizig'i
+      ctx.drawImage(layer, sx, y, w, h, x, y, w, h);
       ctx.lineWidth = lw;
       ctx.strokeStyle = 'rgba(255,255,255,0.55)';
       ctx.strokeRect(x + lw / 2, y + lw / 2, Math.max(1, w - lw), Math.max(1, h - lw));
       ctx.lineWidth = 1;
       ctx.strokeStyle = 'rgba(8,30,45,0.35)';
       ctx.strokeRect(x + 0.5, y + 0.5, Math.max(1, w - 1), Math.max(1, h - 1));
+      rects.push({ u0: x / W, u1: (x + w) / W, v0: y / H, v1: (y + h) / H });
       xCm += p.w;
     });
 
     const size = selectedSize();
-    return { canvas, wCm: totalW, hCm: maxH, label: size ? size.label : '' };
+    return { canvas, wCm: totalW, hCm: maxH, rects, label: size ? size.label : '' };
   }
   window.lgConstructorAR = {
     isReady: () => !!(state.imageSrc && state.work && getPanes().length),
