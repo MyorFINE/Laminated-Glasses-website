@@ -1596,28 +1596,27 @@ document.addEventListener("DOMContentLoaded",()=>{
     lctx.imageSmoothingEnabled = true; lctx.imageSmoothingQuality = 'high';
     lctx.drawImage(state.work, L.ox, L.oy, L.rw, L.rh);
     applyAdjustPixels(lctx, W, H);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, W, H);
-    ctx.drawImage(layer, 0, 0);
-
-    // faqat panellar egallagan joy qoladi
-    const rects = [];
+    // Har bir panel ALOHIDA chiziladi: faqat o'z to'rtburchagi ichidagi rasm bo'lagi olinadi
+    // (rasmning panel chetidan tashqariga "davomi" umuman chiqmaydi). Panelning o'zi
+    // egallamagan joy SHAFFOF qoladi — devor ko'rinadi. Rasm joylashuvi (zoom/surish/
+    // moslash va filtrlar) konstruktordagi ko'rinish bilan aynan bir xil.
     let xCm = 0;
+    const lw = Math.max(1, Math.round(ppc * 0.12));
     panes.forEach(p => {
-      const w = Math.round(p.w * ppc), h = Math.round(p.h * ppc);
-      rects.push({ x: Math.round(xCm * ppc), y: Math.round((H - h) / 2), w, h });
+      const x = Math.round(xCm * ppc), w = Math.round(p.w * ppc), h = Math.round(p.h * ppc);
+      const y = Math.round((H - h) / 2);
+      ctx.fillStyle = '#ffffff';                       // "contain" rejimida rasm yetmagan joy oq
+      ctx.fillRect(x, y, w, h);
+      ctx.drawImage(layer, x, y, w, h, x, y, w, h);    // aynan shu panelga to'g'ri keladigan bo'lak
+      // shisha qirrasi: ichki yorug' chiziq + tashqi ingichka soya chizig'i
+      ctx.lineWidth = lw;
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.strokeRect(x + lw / 2, y + lw / 2, Math.max(1, w - lw), Math.max(1, h - lw));
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(8,30,45,0.35)';
+      ctx.strokeRect(x + 0.5, y + 0.5, Math.max(1, w - 1), Math.max(1, h - 1));
       xCm += p.w;
     });
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.fillStyle = '#000';
-    rects.forEach(r => ctx.fillRect(r.x, r.y, r.w, r.h));
-    ctx.globalCompositeOperation = 'source-over';
-
-    // har bir panelning ichki ramkasi (panellar orasida ajratuvchi chiziq bo'lib ko'rinadi)
-    const fw = Math.max(2, Math.round(ppc * 0.5));
-    ctx.strokeStyle = 'rgba(255,255,255,0.92)';
-    ctx.lineWidth = fw;
-    rects.forEach(r => ctx.strokeRect(r.x + fw/2, r.y + fw/2, Math.max(1, r.w - fw), Math.max(1, r.h - fw)));
 
     const size = selectedSize();
     return { canvas, wCm: totalW, hCm: maxH, label: size ? size.label : '' };

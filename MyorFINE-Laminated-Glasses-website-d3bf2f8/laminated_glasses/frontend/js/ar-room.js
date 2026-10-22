@@ -1,18 +1,19 @@
-/* Laminated Glasses — "Xonada ko'rish" (AR) moduli.
+/* Laminated Glasses — "Xonada ko'rish" (universal AR/3D) moduli.
  *
- * Konstruktordagi tayyor dizayn (rasm + tanlangan o'lcham) xona devorida HAQIQIY
- * o'lchamda ko'rsatiladi.
+ * Hamma qurilmada ishlaydi (ARCore/ARKit shart emas):
+ *  • Telefon: jonli kamera + oyna avtomatik devorga qo'yiladi. Giroskop bo'lsa, telefonni
+ *    burganda oyna devorda joyida turadi.
+ *  • Kompyuter (va kamerasiz telefon): xona rasmi yuklanadi, bosilgan joyga oyna qo'yiladi.
  *
- *  • Telefon: jonli kamera (orqa kamera) — oyna kamera tasviri ustida turadi.
- *  • Kompyuter: xona rasmi yuklanadi (yoki veb-kamera) — sichqoncha bilan bosilgan
- *    joyga oyna qo'yiladi.
+ * Haqiqiy o'lcham (etalonsiz):
+ *  • Kamera: "Devorgacha masofa" (m) + telefon kamerasining odatiy ko'rish burchagi.
+ *  • Rasm: "Devorning ko'ringan eni" (m).
+ *  Boshlang'ich qiymat o'zi tanlanadi va oyna kadrning ~65% idan kattalashmaydi.
  *
- * Haqiqiy o'lcham qanday aniqlanadi:
- *   Foydalanuvchi kadrdagi o'lchami ma'lum narsani (A4 qog'oz, eshik balandligi yoki
- *   o'zi kiritgan o'lcham) chiziq bilan belgilaydi → 1 sm necha piksel ekani
- *   aniqlanadi. Oyna shu masshtabda chiziladi.
+ * Realistiklik: perspektiva (3D burilish), shisha qalinligi (8 mm yon qirrasi), devorga
+ * tushadigan soya, yorug' aks, xona yorug'ligiga moslash.
  *
- * Konstruktor bilan aloqa: constructor.html ichidagi window.lgConstructorAR
+ * Konstruktor bilan aloqa — constructor.html ichidagi window.lgConstructorAR:
  *   .isReady()        -> dizayn tayyormi
  *   .buildTexture()   -> { canvas, wCm, hCm, label } (panellar tashqarisi shaffof)
  */
@@ -20,15 +21,18 @@
   'use strict';
 
   var $ = function (id) { return document.getElementById(id); };
-  var S = null;           // holat (overlay ochilganda yaratiladi)
-  var root = null;        // overlay elementi
-  var canvas, ctx;
-  var off = document.createElement('canvas');   // oyna uchun oraliq canvas
+  var S = null, root = null, canvas, ctx;
+  var off = document.createElement('canvas');
   var octx = off.getContext('2d');
+  var gyroPerm = null;                    // iOS uchun ruxsat va'dasi (bosish paytida so'raladi)
+
+  var FIT = 0.65;                         // oyna kadrning eng ko'pi bilan shu ulushi
+  var THICK_CM = 0.8;                     // laminatsiyalangan shisha qalinligi
 
   function round1(n) { return Math.round(n * 10) / 10; }
   function toast(msg, isErr) { if (typeof showToast === 'function') showToast(msg, isErr); }
   function isTouchDevice() { return window.matchMedia && window.matchMedia('(pointer:coarse)').matches; }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
   /* ---------------------------------------------------------------- DOM */
   function build() {
@@ -50,7 +54,7 @@
         '<div class="ar-start" id="arStart">' +
           '<div class="ar-start-card">' +
             '<h3>Oynani xonangizda ko\'ring</h3>' +
-            '<p>Oyna devorda turgandek, <b>haqiqiy o\'lchamda</b> ko\'rinadi.</p>' +
+            '<p>Oyna devorga o\'zi joylashadi va xona ichida real ko\'rinadi.</p>' +
             '<button type="button" class="ar-btn ar-btn-main" id="arBtnCamera">' +
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>' +
               'Jonli kamera' +
@@ -65,36 +69,18 @@
         '<div class="ar-hint" id="arHint" hidden></div>' +
       '</div>' +
       '<div class="ar-panel" id="arPanel" hidden>' +
-        /* 1-qadam: o'lchash */
-        '<div class="ar-step" id="arStepCalib" hidden>' +
-          '<div class="ar-step-title">1. Masshtabni belgilang</div>' +
-          '<div class="ar-ref-row">' +
-            '<select id="arRefSelect" aria-label="Etalon">' +
-              '<option value="29.7">A4 qog\'oz — uzun tomoni (29.7 sm)</option>' +
-              '<option value="21">A4 qog\'oz — qisqa tomoni (21 sm)</option>' +
-              '<option value="200">Eshik balandligi (200 sm)</option>' +
-              '<option value="custom">Boshqa o\'lcham…</option>' +
-            '</select>' +
-            '<label class="ar-cm"><input type="number" id="arRefCm" min="1" max="1000" step="0.1" value="29.7" inputmode="decimal"><span>sm</span></label>' +
-          '</div>' +
-          '<p class="ar-note" id="arCalibNote"></p>' +
-          '<div class="ar-actions">' +
-            '<button type="button" class="ar-btn" id="arBack">Orqaga</button>' +
-            '<button type="button" class="ar-btn ar-btn-main" id="arCalibOk">Davom etish</button>' +
-          '</div>' +
-        '</div>' +
-        /* 2-qadam: joylashtirish */
-        '<div class="ar-step" id="arStepPlace" hidden>' +
+        '<div class="ar-step" id="arStepPlace">' +
           '<div class="ar-sliders">' +
+            '<label><span id="arDistLabel">Devorgacha masofa</span> <output id="arDistOut">2 m</output><input type="range" id="arDist" min="0.8" max="6" step="0.1" value="2"></label>' +
             '<label>Burilish <output id="arRotOut">0°</output><input type="range" id="arRot" min="-15" max="15" step="0.5" value="0"></label>' +
-            '<label>Masshtab <output id="arScaleOut">100%</output><input type="range" id="arScale" min="50" max="130" step="1" value="100"></label>' +
             '<label>Yon perspektiva <output id="arYawOut">0°</output><input type="range" id="arYaw" min="-45" max="45" step="1" value="0"></label>' +
             '<label>Yuqori / past <output id="arPitchOut">0°</output><input type="range" id="arPitch" min="-30" max="30" step="1" value="0"></label>' +
             '<label>Yorug\'lik <output id="arLightOut">100%</output><input type="range" id="arLight" min="55" max="100" step="1" value="100"></label>' +
           '</div>' +
           '<div class="ar-actions ar-actions-wrap">' +
             '<label class="ar-check"><input type="checkbox" id="arShowDim" checked> O\'lchamni ko\'rsatish</label>' +
-            '<button type="button" class="ar-btn" id="arRecalib">Aniq o\'lchash</button>' +
+            '<label class="ar-check" id="arGyroRow" hidden><input type="checkbox" id="arGyro" checked> Devorga qotirish (telefonni burganda oyna joyida turadi)</label>' +
+            '<button type="button" class="ar-btn" id="arSource">Boshqa rasm / kamera</button>' +
             '<button type="button" class="ar-btn ar-btn-main" id="arSave">Rasmni saqlash</button>' +
           '</div>' +
         '</div>' +
@@ -102,67 +88,118 @@
       '<input type="file" id="arFile" accept="image/*" hidden>' +
       '<video id="arVideo" class="ar-video" playsinline muted autoplay></video>';
     document.body.appendChild(root);
-
     canvas = $('arCanvas');
     ctx = canvas.getContext('2d');
     bind();
   }
 
-  /* ------------------------------------------------------------ holat */
   function freshState() {
     return {
-      src: null,            // 'video' | 'photo'
-      stream: null, video: null, photo: null, bg: null,
-      mode: 'start',        // 'start' | 'calib' | 'place'
+      src: null, stream: null, video: null, photo: null, bg: null,
+      mode: 'start',
       cw: 0, ch: 0, dpr: 1,
-      calib: { a: { x: 0.30, y: 0.5 }, b: { x: 0.70, y: 0.5 }, cm: 29.7 },
-      k: 0,                 // 1 sm = k * canvas eni (piksel)
-      pos: { x: 0.5, y: 0.5 },
-      rot: 0, yaw: 0, pitch: 0, light: 100, showDim: true, scaleMul: 1,
-      tex: null, quad: null,
-      drag: null, raf: 0, loop: 0, opening: false,
+      dist: 2,                          // kamera: devorgacha masofa (m); rasm: ko'ringan devor eni (m)
+      pos: { x: 0.5, y: 0.45 },
+      rot: 0, yaw: 0, pitch: 0, light: 100, showDim: true,
+      tex: null, quad: null, drag: null, raf: 0, loop: 0,
+      gyroOn: false, gyroCur: null, gyroBase: null,
     };
+  }
+
+  /* ----------------------------------------------- masshtab (1 sm = necha px) */
+  function fovRad() { return (S.ch > S.cw ? 52 : 65) * Math.PI / 180; }   // gorizontal ko'rish burchagi (taxminiy)
+  function ppcFor(dist) {
+    if (S.src === 'video') return S.cw / (2 * dist * 100 * Math.tan(fovRad() / 2));
+    return S.cw / (dist * 100);
+  }
+  function ppc() { return ppcFor(S.dist); }
+  // oyna kadrning FIT ulushiga sig'adigan eng kichik "masofa/eni"
+  function fitDist() {
+    var T = S.tex;
+    var needW = T.wCm / (FIT * S.cw);          // kerakli (sm/px) -> dist formulalaridan teskari
+    var needH = T.hCm / (FIT * S.ch);
+    var cmPerPx = Math.max(needW, needH);       // 1 px = cmPerPx sm  (ya'ni ppc = 1/cmPerPx)
+    var visibleWcm = cmPerPx * S.cw;
+    return S.src === 'video' ? visibleWcm / (2 * 100 * Math.tan(fovRad() / 2)) : visibleWcm / 100;
   }
 
   /* ------------------------------------------------------- ochish/yopish */
   async function open() {
     var br = window.lgConstructorAR;
     if (!br || !br.isReady()) { toast("Avval o'lcham tanlang va rasm yuklang.", true); return; }
+    // iOS: giroskop ruxsati faqat bosish paytida so'raladi — shuning uchun eng boshida (await'dan oldin).
+    gyroPerm = requestGyro();
     build();
     stopStream();
     S = freshState();
     var tex = await br.buildTexture();
-    if (!tex) { toast("Dizaynni tayyorlab bo'lmadi.", true); return; }
+    if (!tex) { toast("Dizaynni tayyorlab bo'lmadi.", true); S = null; return; }
     S.tex = tex;
 
     $('arSizeInfo').textContent = tex.label + ' • ' + round1(tex.wCm) + ' × ' + round1(tex.hCm) + ' sm';
     $('arBtnPhotoText').textContent = isTouchDevice() ? 'Suratga olish / galereya' : 'Xona rasmini tanlash';
     $('arStartErr').textContent = '';
     setMode('start');
-
     root.hidden = false;
     document.body.classList.add('ar-lock');
     requestAnimationFrame(function () { root.classList.add('open'); layoutStage(); });
-
-    // Telefonda tugma bosilishining o'zi ruxsat so'rash uchun yetarli — kamerani darrov yoqamiz.
     if (isTouchDevice() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) startCamera();
   }
 
   function close() {
     if (!root || root.hidden) return;
     stopStream();
-    cancelAnimationFrame(S && S.raf); if (S) S.raf = 0;
+    if (S) { cancelAnimationFrame(S.raf); S.raf = 0; S.gyroOn = false; }
     root.classList.remove('open');
     root.hidden = true;
     document.body.classList.remove('ar-lock');
     S = null;
   }
 
+  /* --------------------------------------------------------------- giroskop */
+  async function requestGyro() {
+    try {
+      if (!('DeviceOrientationEvent' in window) || !isTouchDevice()) return false;
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        var r = await DeviceOrientationEvent.requestPermission();
+        return r === 'granted';
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+  function onOrient(e) {
+    if (!S || e.alpha == null || e.beta == null) return;
+    S.gyroCur = { a: e.alpha, b: e.beta };
+    if (!S.gyroOn || S.src !== 'video' || S.mode !== 'place' || S.drag) return;
+    var ang = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+    if (ang !== 0) return;                       // faqat tik (portrait) holatda
+    if (!S.gyroBase) { rebase(); return; }
+    var g = S.gyroBase, f = (S.cw / 2) / Math.tan(fovRad() / 2);
+    var da = ((S.gyroCur.a - g.a + 540) % 360) - 180;       // -180..180
+    var db = S.gyroCur.b - g.b;
+    var rad = Math.PI / 180;
+    S.pos.x = (g.x * S.cw + f * Math.tan(da * rad)) / S.cw;
+    S.pos.y = (g.y * S.ch + f * Math.tan(db * rad)) / S.ch;
+    requestRender();
+  }
+  function rebase() {
+    if (S && S.gyroCur) S.gyroBase = { a: S.gyroCur.a, b: S.gyroCur.b, x: S.pos.x, y: S.pos.y };
+    else if (S) S.gyroBase = null;
+  }
+  async function setupGyro() {
+    var ok = await gyroPerm;
+    if (!S) return;
+    $('arGyroRow').hidden = !(ok && S.src === 'video');
+    S.gyroOn = !!(ok && S.src === 'video' && $('arGyro').checked);
+    if (ok) window.addEventListener('deviceorientation', onOrient);
+    S.gyroBase = null;
+  }
+
   /* ---------------------------------------------------------- manba: kamera */
   function stopStream() {
     if (S && S.stream) { S.stream.getTracks().forEach(function (t) { t.stop(); }); S.stream = null; }
     var v = $('arVideo'); if (v) { try { v.pause(); } catch (e) {} v.srcObject = null; }
-    if (S) { S.loop = 0; }
+    if (S) S.loop = 0;
   }
 
   async function startCamera() {
@@ -180,12 +217,12 @@
       if (!S) { stream.getTracks().forEach(function (t) { t.stop(); }); return; }
       S.stream = stream;
       var v = $('arVideo');
-      v.srcObject = stream;
-      v.muted = true; v.setAttribute('playsinline', '');
+      v.srcObject = stream; v.muted = true; v.setAttribute('playsinline', '');
       await v.play();
       S.src = 'video'; S.video = v; S.photo = null; S.bg = null;
       layoutStage();
       autoPlace();
+      await setupGyro();
       startLoop();
     } catch (e) {
       var name = e && e.name;
@@ -209,7 +246,8 @@
       URL.revokeObjectURL(url);
       if (!S) return;
       stopStream();
-      S.src = 'photo'; S.photo = img; S.video = null;
+      S.src = 'photo'; S.photo = img; S.video = null; S.gyroOn = false;
+      $('arGyroRow').hidden = true;
       layoutStage();
       autoPlace();
     };
@@ -217,91 +255,45 @@
     img.src = url;
   }
 
-  /* -------------------------------------------------------- bosqichlar */
+  /* -------------------------------------------------- avtomatik joylashtirish */
+  function autoPlace() {
+    var base;
+    if (S.src === 'video') base = 2;                                  // devordan ~2 m
+    else base = clamp(2.6 * S.cw / S.ch, 2, 6);                       // rasm balandligi ~2.6 m (shift)
+    var d = Math.max(base, fitDist());                                // kadrdan katta bo'lmasin
+    var sl = $('arDist');
+    var isVideo = S.src === 'video';
+    $('arDistLabel').textContent = isVideo ? 'Devorgacha masofa' : "Devorning ko'ringan eni";
+    sl.min = isVideo ? 0.5 : 1; sl.max = Math.max(isVideo ? 6 : 8, Math.ceil(d * 1.5));
+    S.dist = Math.round(d * 10) / 10;
+    sl.value = S.dist; $('arDistOut').textContent = S.dist + ' m';
+    S.pos = { x: 0.5, y: 0.45 };
+    S.rot = 0; S.yaw = 0; S.pitch = 0; S.light = 100;
+    [['arRot','arRotOut','0°'],['arYaw','arYawOut','0°'],['arPitch','arPitchOut','0°']].forEach(function (a) { $(a[0]).value = 0; $(a[1]).textContent = a[2]; });
+    $('arLight').value = 100; $('arLightOut').textContent = '100%';
+    S.gyroBase = null;
+    setMode('place');
+  }
+
   function setMode(m) {
     S.mode = m;
     $('arStart').hidden = (m !== 'start');
     $('arPanel').hidden = (m === 'start');
-    $('arStepCalib').hidden = (m !== 'calib');
-    $('arStepPlace').hidden = (m !== 'place');
     var hint = $('arHint');
-    if (m === 'calib') {
-      hint.hidden = false;
-      hint.textContent = "Ixtiyoriy: chiziq uchlarini o'lchami ma'lum narsaning ikki chetiga suring.";
-      $('arCalibNote').textContent = S.src === 'video'
-        ? "Devorga A4 qog'oz (yoki o'lchami ma'lum narsa) tuting. Chiziq uchlarini uning chetlariga moslang. Keyin telefonni shu masofada ushlab turing."
-        : "Rasmdagi o'lchami ma'lum narsaning (A4 qog'oz, eshik va h.k.) ikki chetini chiziq uchlari bilan belgilang, o'lchamini kiriting.";
-    } else if (m === 'place') {
+    if (m === 'place') {
       hint.hidden = false;
       hint.textContent = S.src === 'video'
-        ? "Oyna avtomatik qo'yildi. Devordagi kerakli joyga barmoq bilan suring."
+        ? "Oyna devorga qo'yildi. Kerak bo'lsa barmoq bilan suring."
         : "Oyna avtomatik qo'yildi. Qo'ymoqchi bo'lgan joyni bosing — oyna o'sha yerga o'tadi.";
-    } else {
-      hint.hidden = true;
-    }
+    } else hint.hidden = true;
     requestRender();
   }
 
-  /* Avtomatik joylashtirish: etalon talab qilinmaydi.
-     Kamera: telefon kamerasining odatiy ko'rish burchagi va devordan ~2 m masofa taxmin qilinadi.
-     Rasm: xona rasmi balandligi ~2.6 m (odatiy shift balandligi) deb olinadi.
-     Oyna hech qachon kadrning ~65% idan kattalashmaydi. Aniqroq bo'lishi uchun
-     "Aniq o'lchash" (ixtiyoriy) va "Masshtab" slayderi bor. */
-  function autoPlace() {
-    var T = S.tex, ppc;
-    if (S.src === 'video') {
-      var fov = (S.ch > S.cw ? 52 : 65) * Math.PI / 180;          // gorizontal ko'rish burchagi
-      var visibleW = 2 * 200 * Math.tan(fov / 2);                  // 2 m masofadagi kadr eni (sm)
-      ppc = S.cw / visibleW;
-    } else {
-      ppc = S.ch / 260;
-    }
-    var f = Math.min(1, 0.65 * S.cw / (T.wCm * ppc), 0.65 * S.ch / (T.hCm * ppc));
-    ppc *= f;
-    S.k = ppc / S.cw;
-    S.scaleMul = 1;
-    S.pos = { x: 0.5, y: 0.45 };
-    S.rot = 0; S.yaw = 0; S.pitch = 0; S.light = 100;
-    ['arRot','arYaw','arPitch'].forEach(function (id) { $(id).value = 0; });
-    $('arLight').value = 100; $('arScale').value = 100;
-    $('arRotOut').textContent = '0°'; $('arYawOut').textContent = '0°'; $('arPitchOut').textContent = '0°';
-    $('arLightOut').textContent = '100%'; $('arScaleOut').textContent = '100%';
-    setMode('place');
-  }
-
-  function enterCalib() {
-    // chiziqni o'rtaga qaytaramiz
-    S.calib.a = { x: 0.30, y: 0.5 }; S.calib.b = { x: 0.70, y: 0.5 };
-    setMode('calib');
-  }
-
-  function confirmCalib() {
-    var A = toPx(S.calib.a), B = toPx(S.calib.b);
-    var len = Math.hypot(B.x - A.x, B.y - A.y);
-    var cm = Number($('arRefCm').value);
-    if (!(cm > 0)) { toast("Etalon o'lchamini (sm) kiriting.", true); return; }
-    if (len < 24) { toast("Chiziq juda qisqa — uchlarini etalonning chetlariga suring.", true); return; }
-    S.calib.cm = cm;
-    S.k = (len / cm) / S.cw;               // 1 sm = k * canvas eni
-    S.pos = { x: 0.5, y: 0.5 };
-    S.scaleMul = 1; $('arScale').value = 100; $('arScaleOut').textContent = '100%';
-    var ppc = S.k * S.cw;
-    var gw = S.tex.wCm * ppc;
-    setMode('place');
-    if (gw > S.cw * 1.05) {
-      $('arHint').textContent = "Oyna kadrdan katta ko'rinyapti. Telefonni devordan uzoqroq tutib qayta o'lchang.";
-    }
-  }
-
   /* -------------------------------------------------------------- canvas */
-  function boxSize() {
-    var b = $('arStageBox');
-    return { w: Math.max(120, b.clientWidth), h: Math.max(120, b.clientHeight) };
-  }
-
   function layoutStage() {
     if (!S || !canvas) return;
-    var box = boxSize();
+    var b = $('arStageBox');
+    var box = { w: Math.max(120, b.clientWidth), h: Math.max(120, b.clientHeight) };
     var dpr = Math.min(2, window.devicePixelRatio || 1);
     var w = box.w, h = box.h;
     if (S.src === 'photo' && S.photo) {
@@ -312,8 +304,7 @@
     S.cw = w; S.ch = h; S.dpr = dpr;
     canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
-
-    if (S.src === 'photo' && S.photo) {      // fonni bir marta tayyor qilib qo'yamiz (tez chizish uchun)
+    if (S.src === 'photo' && S.photo) {
       var bg = document.createElement('canvas');
       bg.width = canvas.width; bg.height = canvas.height;
       var bctx = bg.getContext('2d');
@@ -324,22 +315,15 @@
     requestRender();
   }
 
-  function toPx(n) { return { x: n.x * S.cw, y: n.y * S.ch }; }
-
   function requestRender() {
-    if (!S || S.src === 'video' && S.loop) return;   // video bo'lsa halqa o'zi chizadi
+    if (!S || (S.src === 'video' && S.loop)) return;
     if (S.raf) return;
     S.raf = requestAnimationFrame(function () { if (S) { S.raf = 0; render(); } });
   }
-
   function startLoop() {
     if (!S || S.loop) return;
     S.loop = 1;
-    (function tick() {
-      if (!S || !S.loop) return;
-      render();
-      requestAnimationFrame(tick);
-    })();
+    (function tick() { if (!S || !S.loop) return; render(); requestAnimationFrame(tick); })();
   }
 
   function drawBackground() {
@@ -349,9 +333,8 @@
     ctx.fillRect(0, 0, W, H);
     if (S.src === 'video' && S.video && S.video.videoWidth) {
       var vw = S.video.videoWidth, vh = S.video.videoHeight;
-      var sc = Math.max(W / vw, H / vh);          // "cover"
-      var dw = vw * sc, dh = vh * sc;
-      ctx.drawImage(S.video, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      var sc = Math.max(W / vw, H / vh);
+      ctx.drawImage(S.video, (W - vw * sc) / 2, (H - vh * sc) / 2, vw * sc, vh * sc);
     } else if (S.src === 'photo' && S.bg) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(S.bg, 0, 0);
@@ -362,38 +345,14 @@
   function render() {
     if (!S || !ctx || !S.cw) return;
     drawBackground();
-    if (S.mode === 'calib') drawCalib();
-    else if (S.mode === 'place') drawGlass(ctx, true);
-  }
-
-  /* ----------------------------------------------------- o'lchash chizig'i */
-  function drawCalib() {
-    var A = toPx(S.calib.a), B = toPx(S.calib.b);
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
-    ctx.strokeStyle = '#ffd24a'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
-    [A, B].forEach(function (p) {
-      ctx.beginPath(); ctx.arc(p.x, p.y, 13, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fill();
-      ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffd24a'; ctx.fill();
-      ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
-    });
-    var cm = Number($('arRefCm').value) || 0;
-    var mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2;
-    pill(ctx, (cm ? round1(cm) : '?') + ' sm', mx, my - 26);
-    ctx.restore();
+    if (S.mode === 'place') drawGlass(ctx);
   }
 
   function pill(c, text, x, y) {
     c.save();
     c.font = '700 13px Manrope, system-ui, sans-serif';
     var tw = c.measureText(text).width + 18;
-    var px = Math.max(tw / 2 + 4, Math.min(S.cw - tw / 2 - 4, x));
-    var py = Math.max(16, Math.min(S.ch - 16, y));
+    var px = clamp(x, tw / 2 + 4, S.cw - tw / 2 - 4), py = clamp(y, 16, S.ch - 16);
     c.fillStyle = 'rgba(6,28,44,.82)';
     var r = 12, x0 = px - tw / 2, y0 = py - 12, h = 24;
     c.beginPath();
@@ -404,16 +363,16 @@
     c.restore();
   }
 
-  /* ------------------------------------------------------------ oyna chizish */
-  /* To'rtburchakning (u,v ∈ [0..1]) ekrandagi nuqtasi: yon/yuqori burilish (perspektiva),
-     tekislikdagi burilish. Markazda (z=0) masshtab o'zgarmaydi → o'lcham haqiqiyligicha qoladi. */
+  /* ------------------------------------------------------------ 3D proyeksiya */
+  /* u,v ∈ [0..1] — oyna yuzidagi nuqta; zOff — devor tomonga (kameradan uzoqqa) chuqurlik.
+     Markazda (z=0) masshtab o'zgarmaydi → o'lcham saqlanadi. */
   function makeProjector(cx, cy, W, H, rotDeg, yawDeg, pitchDeg) {
     var a = yawDeg * Math.PI / 180, b = pitchDeg * Math.PI / 180, r = rotDeg * Math.PI / 180;
     var ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b), cr = Math.cos(r), sr = Math.sin(r);
     var f = Math.max(W, H) * 2.5;
-    return function (u, v) {
-      var x = (u - 0.5) * W, y = (v - 0.5) * H;
-      var x1 = x * ca, z1 = -x * sa;
+    return function (u, v, zOff) {
+      var x = (u - 0.5) * W, y = (v - 0.5) * H, z = zOff || 0;
+      var x1 = x * ca + z * sa, z1 = -x * sa + z * ca;
       var y2 = y * cb - z1 * sb, z2 = y * sb + z1 * cb;
       var xr = x1 * cr - y2 * sr, yr = x1 * sr + y2 * cr;
       var s = f / (f + z2);
@@ -422,7 +381,6 @@
   }
 
   function drawTri(c, img, s0, s1, s2, d0, d1, d2) {
-    // choksiz birikishi uchun uchburchakni biroz kengaytiramiz
     var gx = (d0[0] + d1[0] + d2[0]) / 3, gy = (d0[1] + d1[1] + d2[1]) / 3;
     function grow(p) { var dx = p[0] - gx, dy = p[1] - gy, l = Math.hypot(dx, dy) || 1; return [p[0] + dx / l * 0.7, p[1] + dy / l * 0.7]; }
     var e0 = grow(d0), e1 = grow(d1), e2 = grow(d2);
@@ -442,23 +400,25 @@
     c.restore();
   }
 
-  function drawGlass(target, withLabel) {
+  function drawGlass(target) {
     var T = S.tex; if (!T) return;
-    var ppc = S.k * S.cw * S.scaleMul;
-    var W = T.wCm * ppc, H = T.hCm * ppc;
+    var k = ppc();
+    var W = T.wCm * k, H = T.hCm * k;
     if (!(W > 1 && H > 1)) return;
     var cx = S.pos.x * S.cw, cy = S.pos.y * S.ch;
     var P = makeProjector(cx, cy, W, H, S.rot, S.yaw, S.pitch);
     var q = [P(0, 0), P(1, 0), P(1, 1), P(0, 1)];
     S.quad = q;
+    var tilted = !!(S.yaw || S.pitch);
+    var th = Math.max(1.5, THICK_CM * k);
+    var back = tilted ? [P(0, 0, th), P(1, 0, th), P(1, 1, th), P(0, 1, th)] : null;
 
     var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    q.forEach(function (p) { minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]); minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]); });
+    q.concat(back || []).forEach(function (p) { minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]); minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]); });
     var blur = Math.min(36, Math.max(8, Math.min(W, H) * 0.06));
     var pad = Math.ceil(blur * 2.2);
     var bx = Math.floor(minX - pad), by = Math.floor(minY - pad);
-    var bw = Math.ceil(maxX - minX + pad * 2), bh = Math.ceil(maxY - minY + pad * 2);
-    bw = Math.min(bw, 6000); bh = Math.min(bh, 6000);
+    var bw = Math.min(6000, Math.ceil(maxX - minX + pad * 2)), bh = Math.min(6000, Math.ceil(maxY - minY + pad * 2));
 
     var dpr = S.dpr;
     var ow = Math.max(1, Math.round(bw * dpr)), oh = Math.max(1, Math.round(bh * dpr));
@@ -469,15 +429,28 @@
     octx.setTransform(dpr, 0, 0, dpr, -bx * dpr, -by * dpr);
     octx.imageSmoothingEnabled = true; octx.imageSmoothingQuality = 'high';
 
+    // Shisha qalinligi: yon qirralar (perspektivada ko'rinadi), keyin old yuz ustidan chiziladi
+    if (back) {
+      octx.lineJoin = 'round';
+      for (var e = 0; e < 4; e++) {
+        var e2 = (e + 1) % 4;
+        octx.beginPath();
+        octx.moveTo(q[e][0], q[e][1]); octx.lineTo(q[e2][0], q[e2][1]);
+        octx.lineTo(back[e2][0], back[e2][1]); octx.lineTo(back[e][0], back[e][1]); octx.closePath();
+        octx.fillStyle = 'rgba(176,222,212,0.95)'; octx.fill();
+        octx.strokeStyle = 'rgba(40,90,90,0.45)'; octx.lineWidth = 0.8; octx.stroke();
+      }
+    }
+
     var tc = T.canvas;
-    if (!S.yaw && !S.pitch) {
+    if (!tilted) {
       octx.save();
       octx.translate(cx, cy); octx.rotate(S.rot * Math.PI / 180);
       octx.drawImage(tc, -W / 2, -H / 2, W, H);
       octx.restore();
     } else {
-      var N = 14, tw = tc.width, th = tc.height, g = [], i, j;
-      for (j = 0; j <= N; j++) { g[j] = []; for (i = 0; i <= N; i++) g[j][i] = { d: P(i / N, j / N), s: [i / N * tw, j / N * th] }; }
+      var N = 14, tw = tc.width, thp = tc.height, g = [], i, j;
+      for (j = 0; j <= N; j++) { g[j] = []; for (i = 0; i <= N; i++) g[j][i] = { d: P(i / N, j / N), s: [i / N * tw, j / N * thp] }; }
       for (j = 0; j < N; j++) for (i = 0; i < N; i++) {
         var p00 = g[j][i], p10 = g[j][i + 1], p11 = g[j + 1][i + 1], p01 = g[j + 1][i];
         drawTri(octx, tc, p00.s, p10.s, p11.s, p00.d, p10.d, p11.d);
@@ -485,7 +458,7 @@
       }
     }
 
-    // Shisha porlashi va xona yorug'ligiga moslash — faqat oyna piksellariga ('source-atop')
+    // Yorug' aks + xona yorug'ligiga moslash (faqat oyna piksellariga)
     octx.globalCompositeOperation = 'source-atop';
     var gr = octx.createLinearGradient(q[0][0], q[0][1], q[2][0], q[2][1]);
     gr.addColorStop(0, 'rgba(255,255,255,0.10)');
@@ -497,7 +470,7 @@
     if (S.light < 100) { octx.fillStyle = 'rgba(0,0,0,' + ((100 - S.light) / 100 * 0.75).toFixed(3) + ')'; octx.fillRect(bx, by, bw, bh); }
     octx.globalCompositeOperation = 'source-over';
 
-    // Asosiy canvasga soya bilan
+    // Devorga tushadigan soya
     target.save();
     target.setTransform(1, 0, 0, 1, 0, 0);
     target.shadowColor = 'rgba(0,0,0,0.38)';
@@ -507,7 +480,7 @@
     target.drawImage(off, bx * dpr, by * dpr, bw * dpr, bh * dpr);
     target.restore();
 
-    if (withLabel && S.showDim) {
+    if (S.showDim) {
       target.setTransform(S.dpr, 0, 0, S.dpr, 0, 0);
       pill(target, round1(T.wCm) + ' × ' + round1(T.hCm) + ' sm', cx, maxY + 18);
     }
@@ -528,45 +501,26 @@
     var r = canvas.getBoundingClientRect();
     return { x: (e.clientX - r.left) * (S.cw / r.width), y: (e.clientY - r.top) * (S.ch / r.height) };
   }
-  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
-
   function onDown(e) {
-    if (!S || S.mode === 'start') return;
+    if (!S || S.mode !== 'place') return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
     canvas.setPointerCapture(e.pointerId);
     var p = pointer(e);
-    if (S.mode === 'calib') {
-      var A = toPx(S.calib.a), B = toPx(S.calib.b);
-      var dA = Math.hypot(p.x - A.x, p.y - A.y), dB = Math.hypot(p.x - B.x, p.y - B.y);
-      if (Math.min(dA, dB) < 46) S.drag = { t: dA <= dB ? 'a' : 'b' };
-      else S.drag = { t: 'line', sx: p.x, sy: p.y, a: { x: S.calib.a.x, y: S.calib.a.y }, b: { x: S.calib.b.x, y: S.calib.b.y } };
-    } else {
-      if (pointInQuad(p)) S.drag = { t: 'move', dx: S.pos.x * S.cw - p.x, dy: S.pos.y * S.ch - p.y };
-      else { S.pos.x = clamp01(p.x / S.cw); S.pos.y = clamp01(p.y / S.ch); S.drag = { t: 'move', dx: 0, dy: 0 }; }
-    }
+    if (pointInQuad(p)) S.drag = { dx: S.pos.x * S.cw - p.x, dy: S.pos.y * S.ch - p.y };
+    else { S.pos.x = clamp(p.x / S.cw, 0, 1); S.pos.y = clamp(p.y / S.ch, 0, 1); S.drag = { dx: 0, dy: 0 }; }
     requestRender();
   }
-
   function onMove(e) {
     if (!S || !S.drag) return;
-    var p = pointer(e), d = S.drag;
-    if (d.t === 'a' || d.t === 'b') {
-      S.calib[d.t] = { x: clamp01(p.x / S.cw), y: clamp01(p.y / S.ch) };
-    } else if (d.t === 'line') {
-      var dx = (p.x - d.sx) / S.cw, dy = (p.y - d.sy) / S.ch;
-      var minDx = -Math.min(d.a.x, d.b.x), maxDx = 1 - Math.max(d.a.x, d.b.x);
-      var minDy = -Math.min(d.a.y, d.b.y), maxDy = 1 - Math.max(d.a.y, d.b.y);
-      dx = Math.max(minDx, Math.min(maxDx, dx)); dy = Math.max(minDy, Math.min(maxDy, dy));
-      S.calib.a = { x: d.a.x + dx, y: d.a.y + dy }; S.calib.b = { x: d.b.x + dx, y: d.b.y + dy };
-    } else if (d.t === 'move') {
-      S.pos.x = clamp01((p.x + d.dx) / S.cw); S.pos.y = clamp01((p.y + d.dy) / S.ch);
-    }
+    var p = pointer(e);
+    S.pos.x = clamp((p.x + S.drag.dx) / S.cw, 0, 1);
+    S.pos.y = clamp((p.y + S.drag.dy) / S.ch, 0, 1);
     requestRender();
   }
-
   function onUp(e) {
     if (!S) return;
+    if (S.drag) rebase();                        // yangi joy giroskop uchun "devordagi nuqta" bo'ladi
     S.drag = null;
     try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
   }
@@ -574,14 +528,14 @@
   /* --------------------------------------------------------------- saqlash */
   async function save() {
     if (!S || S.mode !== 'place') return;
-    render();                                   // eng so'nggi kadrni chizamiz
+    render();
     var blob = await new Promise(function (res) { canvas.toBlob(res, 'image/jpeg', 0.92); });
     if (!blob) { toast("Rasmni saqlab bo'lmadi.", true); return; }
     var name = 'oyna-xonada-' + new Date().toISOString().slice(0, 10) + '.jpg';
     try {
       var file = new File([blob], name, { type: 'image/jpeg' });
       if (isTouchDevice() && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: "Oyna xonamda" });
+        await navigator.share({ files: [file], title: 'Oyna xonamda' });
         return;
       }
     } catch (e) { if (e && e.name === 'AbortError') return; }
@@ -596,39 +550,25 @@
   /* ---------------------------------------------------------------- tadbirlar */
   function bind() {
     $('arClose').addEventListener('click', close);
-    $('arBtnCamera').addEventListener('click', startCamera);
+    $('arBtnCamera').addEventListener('click', function () { gyroPerm = requestGyro(); startCamera(); });
     $('arBtnPhoto').addEventListener('click', function () { $('arFile').value = ''; $('arFile').click(); });
     $('arFile').addEventListener('change', function (e) { loadPhoto(e.target.files && e.target.files[0]); });
-    $('arBack').addEventListener('click', function () { setMode('place'); });
-    $('arCalibOk').addEventListener('click', confirmCalib);
-    $('arRecalib').addEventListener('click', enterCalib);
+    $('arSource').addEventListener('click', function () {
+      stopStream(); S.src = null; S.photo = null; S.bg = null; S.video = null; S.gyroOn = false;
+      $('arGyroRow').hidden = true; layoutStage(); setMode('start');
+    });
     $('arSave').addEventListener('click', save);
 
-    var sel = $('arRefSelect'), cm = $('arRefCm');
-    sel.addEventListener('change', function () {
-      if (sel.value === 'custom') { cm.focus(); cm.select(); }
-      else cm.value = sel.value;
-      requestRender();
-    });
-    cm.addEventListener('input', function () {
-      var match = Array.prototype.some.call(sel.options, function (o) { return o.value !== 'custom' && Number(o.value) === Number(cm.value); });
-      if (!match) sel.value = 'custom';
-      requestRender();
-    });
-
     function slider(id, outId, key, fmt) {
-      $(id).addEventListener('input', function (e) {
-        S[key] = Number(e.target.value);
-        $(outId).textContent = fmt(S[key]);
-        requestRender();
-      });
+      $(id).addEventListener('input', function (e) { S[key] = Number(e.target.value); $(outId).textContent = fmt(S[key]); requestRender(); });
     }
-    $('arScale').addEventListener('input', function (e) { S.scaleMul = Number(e.target.value) / 100; $('arScaleOut').textContent = e.target.value + '%'; requestRender(); });
+    slider('arDist', 'arDistOut', 'dist', function (v) { return round1(v) + ' m'; });
     slider('arRot', 'arRotOut', 'rot', function (v) { return v + '°'; });
     slider('arYaw', 'arYawOut', 'yaw', function (v) { return v + '°'; });
     slider('arPitch', 'arPitchOut', 'pitch', function (v) { return v + '°'; });
     slider('arLight', 'arLightOut', 'light', function (v) { return v + '%'; });
     $('arShowDim').addEventListener('change', function (e) { S.showDim = e.target.checked; requestRender(); });
+    $('arGyro').addEventListener('change', function (e) { S.gyroOn = e.target.checked; rebase(); });
 
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointermove', onMove);
@@ -639,11 +579,10 @@
     window.addEventListener('orientationchange', function () { setTimeout(function () { if (S && root && !root.hidden) layoutStage(); }, 250); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && root && !root.hidden) close(); });
     document.addEventListener('visibilitychange', function () {
-      if (document.hidden && S && S.src === 'video') { /* fon rejimida kamera yopiladi */ stopStream(); S.src = null; setMode('start'); }
+      if (document.hidden && S && S.src === 'video') { stopStream(); S.src = null; S.gyroOn = false; $('arGyroRow').hidden = true; setMode('start'); }
     });
   }
 
-  /* -------------------------------------------------------------- tashqariga */
   document.addEventListener('DOMContentLoaded', function () {
     var btn = $('constructorArBtn');
     if (!btn) return;
