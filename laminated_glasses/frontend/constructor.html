@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="/css/dialogs.css" />
 <link rel="stylesheet" href="/css/theme.css" />
 <link rel="stylesheet" href="/css/ar-room.css" />
+<link rel="stylesheet" href="/css/constructor-3d.css" />
 <style>
   .constructor-grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:26px;align-items:start;}
   @media (max-width:860px){.constructor-grid{grid-template-columns:1fr;}}
@@ -276,7 +277,7 @@
             <button type="button" class="ce-chip" data-fx="sepia">Sepiya</button>
             <button type="button" class="ce-chip" data-fx="vivid">Jonli</button>
           </div>
-          <p class="ce-hint">Rasmni ko'rinish oynasida sichqoncha yoki barmoq bilan suring; sichqoncha g'ildiragi yoki ikki barmoq bilan kattalashtiring. Eng oxirgi ko'rinish aynan yuklab olinadi va Telegramga yuboriladi.</p>
+          <p class="ce-hint">Rasmni panel ichida surish uchun ko'rinish oynasidagi «Siljitish» tugmasini yoqing, so'ng sichqoncha yoki barmoq bilan suring; g'ildirak, ikki barmoq yoki Masshtab slayderi bilan kattalashtiring. Eng oxirgi ko'rinish aynan yuklab olinadi va Telegramga yuboriladi.</p>
         </div>
       </div>
 
@@ -288,19 +289,69 @@
             <span class="constructor-preview-stat" id="constructorStatSize">0 × 0 sm</span>
           </div>
         </div>
-        <div class="constructor-stage-wrap" id="constructorStageWrap">
-          <div class="constructor-preview-placeholder" id="constructorPreviewPlaceholder">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 15 5-5 4 4 4-4 5 5"/><circle cx="8.5" cy="8.5" r="1.4"/></svg>
-            <span>O'lchamni tanlang va rasm yuklang — panellarga bo'lib shu yerda ko'rsatamiz</span>
+        <div class="cv3">
+          <div class="cv3-stage" id="constructorStageWrap">
+            <canvas class="cv3-canvas" id="constructor3d" aria-label="Oynaning 3D ko'rinishi"></canvas>
+            <div class="cv3-fallback" id="constructorFallback" hidden></div>
+            <div class="cv3-labels" id="constructor3dLabels"></div>
+
+            <div class="cv3-top">
+              <div class="cv3-seg" id="cvMode" role="group" aria-label="Boshqaruv rejimi">
+                <button type="button" data-mode="rotate" class="active" title="3D aylantirish">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>Aylantirish
+                </button>
+                <button type="button" data-mode="move" id="cvModeMove" title="Rasmni panel ichida siljitish" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>Siljitish
+                </button>
+              </div>
+              <div class="cv3-tools">
+                <button type="button" class="cv3-icon-btn constructor-zoom-btn-3d" id="constructorZoomBtn" aria-label="Kattalashtirib ko'rish" title="Yakuniy rasmni kattalashtirib ko'rish" hidden>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></svg>
+                </button>
+                <button type="button" class="cv3-icon-btn" id="cvZoomIn" aria-label="Yaqinlashtirish" title="Yaqinlashtirish">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
+                <button type="button" class="cv3-icon-btn" id="cvZoomOut" aria-label="Uzoqlashtirish" title="Uzoqlashtirish">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>
+                </button>
+                <button type="button" class="cv3-icon-btn" id="cvResetView" aria-label="Ko'rinishni tiklash" title="Ko'rinishni tiklash (ikki marta bosish)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="cv3-temp" id="cvTemp" aria-live="polite">
+              <div class="cv3-temp-row"><span>Pech harorati</span><b id="cvTempVal">22°C</b></div>
+              <div class="cv3-temp-bar"><i id="cvTempBar"></i></div>
+            </div>
+
+            <div class="cv3-placeholder" id="constructorPreviewPlaceholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m3 15 5-5 4 4 4-4 5 5"/><circle cx="8.5" cy="8.5" r="1.4"/></svg>
+              <span>Rasm yuklang — oynada 3D ko'rinishda shu yerda chiqadi</span>
+            </div>
           </div>
-          <div class="constructor-artwork" id="constructorArtwork" hidden></div>
-          <button type="button" class="constructor-zoom-btn" id="constructorZoomBtn" aria-label="Kattalashtirib ko'rish" hidden>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></svg>
-          </button>
         </div>
         <div class="constructor-preview-info">
           <span id="constructorPreviewSize">O'lcham tanlanmagan</span>
           <strong id="constructorPreviewPrice"></strong>
+        </div>
+        <p class="cv3-lock" id="cvLock">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <span>O'lchamlar ustaxona tomonidan belgilangan — ularni o'zgartirib bo'lmaydi.</span>
+        </p>
+        <div class="cv3-actions" id="cvActions">
+          <button type="button" class="cv3-btn cv3-btn-split" id="cvExplodeBtn" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 8 4-8 4-8-4 8-4z"/><path d="m4 12 8 4 8-4"/><path d="m4 17 8 4 8-4"/></svg>
+            <span><span id="cvExplodeText">Qatlamni ajratish</span><small>4 ta qatlamni ko'rish</small></span>
+          </button>
+          <button type="button" class="cv3-btn cv3-btn-heat" id="cvHeatBtn" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3.5 5 5.2 5 10a5 5 0 0 1-10 0c0-2 1-3.4 2-4.6.4 1.4 1 2 2 2.6C11 8.5 10.8 5.8 12 3z"/></svg>
+            <span><span id="cvHeatText">Qizdirish</span><small id="cvHeatSub">Pechda 140°C</small></span>
+          </button>
+        </div>
+        <div class="cv3-status" id="cvStatus">
+          <div class="cv3-status-ico" id="cvStatusIco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 8 4-8 4-8-4 8-4z"/><path d="m4 12 8 4 8-4"/></svg></div>
+          <div><strong id="cvStatusTitle">Yig'ilgan holat</strong><span id="cvStatusDesc">Oynani sichqoncha yoki barmoq bilan aylantirib ko'ring: bosma rasm, PVB plyonka va himoya oynasi.</span></div>
         </div>
         <div class="constructor-actions-row" style="display:flex; gap:8px; margin-top:12px;">
           <button type="button" class="btn btn-ghost" id="constructorDownloadBtn" style="flex:1;" disabled>
@@ -602,6 +653,8 @@
 
 <script src="/js/dialogs.js"></script>
 <script src="/js/main.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/js/constructor-3d.js"></script>
 <script src="/js/ar-room.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
@@ -623,7 +676,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     adj: { b: 100, c: 100, s: 100, gray: false, sepia: false },
   };
   const MAX_WORK_SIDE = 3200;
-  let paneImgs = [];
   let frame = { w: 0, h: 0, scale: 1 };
 
   /* ---- Konstruktor limiti: har bir Google akkaunt (Gmail) uchun N soatda 1 marta ----
@@ -868,120 +920,183 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   /* Faqat joylashuv/filtrni yangilaydi (DOM'ni qayta qurmaydi) — sudrash va slayderlar
      kuchsiz telefonlarda ham silliq ishlashi uchun. */
+  /* ====================  3D SAHNA (js/constructor-3d.js)  ====================
+     Admin belgilagan har bir panel o'lchami (sm) sahnada AYNAN shu nisbatda quriladi.
+     Foydalanuvchi o'lchamni o'zgartira olmaydi — faqat ustaxona qo'shgan o'lchamlardan birini tanlaydi. */
+  const stageWrap = $('constructorStageWrap');
+  let stage3d = null, stage3dTried = false, stageSig = '', canvasFresh = false;
+  let printCanvas = null, printLayer = null;
+  let lastStageState = { exploded: false, heating: false, cured: false, temp: 22, progress: 0 };
+
+  function readyNow(){ return !!(state.imageSrc && state.work && getPanes().length); }
+
+  function ensureStage(){
+    if(stage3d || stage3dTried) return stage3d;
+    stage3dTried = true;
+    try{
+      if(window.LGStage3D && window.THREE){
+        stage3d = LGStage3D.create({
+          wrap: stageWrap,
+          canvas: $('constructor3d'),
+          labels: $('constructor3dLabels'),
+          onState: onStageState,
+          onImageDrag: onImageDrag,
+          onImageZoom: (f) => { if(state.work) setZoom(state.view.zoom * f); },
+        });
+      }
+    }catch(e){ stage3d = null; }
+    if(!stage3d){
+      // WebGL ishlamasa — tekis ko'rinish (yuklab olish va yuborish baribir ishlaydi)
+      $('constructor3d').hidden = true;
+      $('constructorFallback').hidden = false;
+      ['cvActions','cvStatus','cvMode'].forEach(id => { const n = $(id); if(n) n.hidden = true; });
+    }
+    return stage3d;
+  }
+
+  /* Bosma rasm canvas'i: butun panellar qatori uchun BITTA uzluksiz tasvir (oraliqsiz).
+     Sahnada har bir panel shu tasvirning o'z bo'lagini oladi. */
+  function ensurePrintCanvas(sumW, maxH){
+    const ppc = Math.max(2, Math.min(24, 2048 / Math.max(sumW, maxH, 1)));
+    const W = Math.max(8, Math.round(sumW * ppc)), H = Math.max(8, Math.round(maxH * ppc));
+    frame = { w: W, h: H, scale: ppc };
+    if(printCanvas && printCanvas.width === W && printCanvas.height === H) return false;
+    printCanvas = document.createElement('canvas'); printCanvas.width = W; printCanvas.height = H;
+    printLayer = document.createElement('canvas'); printLayer.width = W; printLayer.height = H;
+    return true;
+  }
+
+  function drawPrint(){
+    if(!printCanvas) return;
+    const W = printCanvas.width, H = printCanvas.height, g = printCanvas.getContext('2d');
+    if(!state.work){
+      const gr = g.createLinearGradient(0, 0, W, H);
+      gr.addColorStop(0, '#f6fafd'); gr.addColorStop(1, '#d3e6f4');
+      g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      g.strokeStyle = 'rgba(18,85,127,0.10)'; g.lineWidth = 1;
+      const step = Math.max(14, Math.round(frame.scale * 5));
+      g.beginPath();
+      for(let x = 0; x <= W; x += step){ g.moveTo(x + .5, 0); g.lineTo(x + .5, H); }
+      for(let y = 0; y <= H; y += step){ g.moveTo(0, y + .5); g.lineTo(W, y + .5); }
+      g.stroke();
+      return;
+    }
+    const L = layout(W, H);
+    state.view.px = L.px; state.view.py = L.py;
+    const lctx = printLayer.getContext('2d');
+    lctx.clearRect(0, 0, W, H);
+    lctx.imageSmoothingEnabled = true; lctx.imageSmoothingQuality = 'high';
+    lctx.drawImage(state.work, L.ox, L.oy, L.rw, L.rh);
+    applyAdjustPixels(lctx, W, H);               // yuklab olishdagi formulalar bilan bir xil
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);   // "butunlay sig'dirish" rejimida bo'sh joy oq
+    g.drawImage(printLayer, 0, 0);
+  }
+
   let applyRaf = 0;
   function scheduleApply(){ if(applyRaf) return; applyRaf = requestAnimationFrame(() => { applyRaf = 0; applyView(); }); }
   function applyView(){
-    if(!state.work || !paneImgs.length || !frame.w) return;
-    const L = layout(frame.w, frame.h);
-    state.view.px = L.px; state.view.py = L.py;
-    const filter = isDefaultAdj() ? '' : cssFilter();
-    paneImgs.forEach(({img, xCm, topCm}) => {
-      img.style.width = `${L.rw}px`;
-      img.style.height = `${L.rh}px`;
-      img.style.left = `${L.ox - xCm*frame.scale}px`;
-      img.style.top = `${L.oy - topCm*frame.scale}px`;
-      img.style.filter = filter;
-    });
-    updateEditorUi(L);
+    if(!state.work || !printCanvas) return;
+    drawPrint();
+    if(stage3d) stage3d.refreshPrint();
+    updateEditorUi(layout(frame.w, frame.h));
   }
 
   function renderStage(){
-    const stageWrap = $('constructorStageWrap');
-    const artwork = $('constructorArtwork');
-    const placeholder = $('constructorPreviewPlaceholder');
     const panes = getPanes();
-
     const totalW = panes.reduce((s,p) => s + p.w, 0);
     const maxH = Math.max(...panes.map(p => p.h), 0);
     $('constructorStatPanes').textContent = `${panes.length} oyna`;
     $('constructorStatSize').textContent = `${round(totalW)} × ${round(maxH)} sm`;
 
-    const shareBtn = $('constructorShareBtn');
-    const downloadBtn = $('constructorDownloadBtn');
-    const zoomBtn = $('constructorZoomBtn');
-    const ready = !!(state.imageSrc && state.work && panes.length);
-    if(shareBtn) shareBtn.disabled = !ready;
-    if(downloadBtn) downloadBtn.disabled = !ready;
-    if(zoomBtn) zoomBtn.hidden = !ready;
-    const arBtn = $('constructorArBtn');
-    if(arBtn) arBtn.disabled = !ready;
+    const ready = readyNow();
+    ['constructorShareBtn','constructorDownloadBtn','constructorArBtn'].forEach(id => { const n = $(id); if(n) n.disabled = !ready; });
+    $('constructorZoomBtn').hidden = !ready;
     $('constructorEditor').hidden = !ready;
+    $('cvModeMove').disabled = !ready;
+    $('constructorPreviewPlaceholder').hidden = ready;
 
-    paneImgs = [];
-    if(!ready){
-      artwork.hidden = true;
-      artwork.innerHTML = '';
-      artwork.classList.remove('editable');
-      placeholder.hidden = false;
+    const st = ensureStage();
+    if(!panes.length){
+      $('constructorPreviewPlaceholder').hidden = false;
+      if(st){ st.build([]); stageSig = ''; }
+      onStageState(lastStageState);
       return;
     }
 
-    placeholder.hidden = true;
-    artwork.hidden = false;
-    artwork.classList.add('editable');
-    artwork.innerHTML = '';
-
-    const maxPreviewW = Math.max(220, stageWrap.clientWidth - 44);
-    const maxPreviewH = Math.max(180, stageWrap.clientHeight - 44);
-    const pxPerCm = Math.min(maxPreviewW / totalW, maxPreviewH / maxH);
-    const scale = Math.max(0.5, Math.min(4, pxPerCm));
-    frame = { w: totalW*scale, h: maxH*scale, scale };
-
-    artwork.style.width = `${frame.w}px`;
-    artwork.style.height = `${frame.h}px`;
-
-    let xCm = 0;
-    panes.forEach((p) => {
-      const pane = document.createElement('div');
-      pane.className = 'constructor-pane' + (state.view.fit === 'contain' ? ' contain' : '');
-      pane.style.width = `${p.w * scale}px`;
-      pane.style.height = `${p.h * scale}px`;
-
-      const img = document.createElement('img');
-      img.src = state.imageSrc;
-      img.alt = '';
-      img.draggable = false;
-      pane.appendChild(img);
-      // Pane umumiy balandlikka nisbatan vertikal markazda turadi → rasm shu farqni hisobga oladi
-      paneImgs.push({ img, xCm, topCm: (maxH - p.h) / 2 });
-
-      const glare = document.createElement('div');
-      glare.className = 'constructor-pane-glare';
-      pane.appendChild(glare);
-
-      const label = document.createElement('div');
-      label.className = 'constructor-pane-label';
-      label.textContent = `${p.index} • ${round(p.w)}×${round(p.h)} sm`;
-      pane.appendChild(label);
-
-      artwork.appendChild(pane);
-      xCm += p.w;
-    });
-    applyView();
+    canvasFresh = ensurePrintCanvas(totalW, maxH);
+    if(st){
+      const sig = state.selectedId + '|' + panes.map(p => p.w + 'x' + p.h).join(',');
+      if(sig !== stageSig){
+        stageSig = sig;
+        st.build(panes.map(p => ({ index: p.index, w: p.w, h: p.h })));
+        canvasFresh = true;
+        lastStageState = { exploded: false, heating: false, cured: false, temp: 22, progress: 0 };
+        setModeUi('rotate'); st.setMode('rotate');
+      }
+      if(canvasFresh) st.setPrintCanvas(printCanvas);
+    } else {
+      const fb = $('constructorFallback');
+      if(printCanvas.parentNode !== fb){ fb.innerHTML = ''; fb.appendChild(printCanvas); }
+    }
+    if(!ready && st && st.getMode() === 'move'){ st.setMode('rotate'); setModeUi('rotate'); }
+    if(ready) applyView(); else { drawPrint(); if(st) st.refreshPrint(); }
+    onStageState(lastStageState);
   }
 
-  /* Sichqoncha bilan silliq 3D burilish (faqat pointer qurilmalarda
-     ishlaydi; teginish ekranlarida panel statik qoladi, avtomatik
-     porlash animatsiyasi esa baribir ishlab turadi). Sichqoncha
-     bosilgan joyga qarab siljib turadigan nur refleksi olib tashlandi. */
-  const stageWrapEl = $('constructorStageWrap');
-  stageWrapEl.addEventListener('mousemove', (e) => {
-    const artwork = $('constructorArtwork');
-    if(!artwork || artwork.hidden || editDrag.active) return;
-    const rect = stageWrapEl.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const rotateX = ((y - centerY) / centerY) * -6;
-    const rotateY = ((x - centerX) / centerX) * 6;
-    artwork.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-  });
-  stageWrapEl.addEventListener('mouseleave', () => {
-    const artwork = $('constructorArtwork');
-    if(!artwork) return;
-    artwork.style.transform = 'rotateX(0deg) rotateY(0deg)';
-  });
+  /* ---- 3D holati -> tugmalar va izoh matni ---- */
+  function onStageState(s){
+    lastStageState = s;
+    const ready = readyNow();
+    const exBtn = $('cvExplodeBtn'), heatBtn = $('cvHeatBtn');
+    exBtn.classList.toggle('active', !!s.exploded);
+    $('cvExplodeText').textContent = s.exploded ? "Qatlamni yig'ish" : 'Qatlamni ajratish';
+    exBtn.disabled = !ready || !!s.heating;
+
+    heatBtn.classList.toggle('is-busy', !!s.heating);
+    heatBtn.classList.toggle('is-done', !!s.cured && !s.heating);
+    heatBtn.disabled = !ready || !!s.heating;
+    if(s.heating){ $('cvHeatText').textContent = 'Qizdirilmoqda…'; $('cvHeatSub').textContent = Math.round(s.temp) + '°C'; }
+    else if(s.cured){ $('cvHeatText').textContent = 'Qizdirilgan ✓'; $('cvHeatSub').textContent = 'Asl holatga qaytarish'; }
+    else { $('cvHeatText').textContent = 'Qizdirish'; $('cvHeatSub').textContent = 'Pechda 140°C'; }
+
+    const tp = $('cvTemp');
+    tp.classList.toggle('on', !!s.heating);
+    $('cvTempVal').textContent = Math.round(s.temp) + '°C';
+    $('cvTempBar').style.width = Math.max(0, Math.min(100, (s.temp - 22) / 118 * 100)) + '%';
+
+    let cls = '', title, desc;
+    if(s.heating){
+      cls = 'is-hot';
+      if(s.progress >= 0.98 && s.temp < 138){ title = 'Sovutilmoqda'; desc = "Qatlamlar yaxlit birikib qotmoqda — oyna sekin sovutiladi."; }
+      else if(s.progress > 0.12){ title = "PVB plyonka erimoqda"; desc = "140°C da plyonka suyuqlanib, bosma rasm va oynani bir-biriga zich yopishtirmoqda."; }
+      else { title = 'Pech qizdirilmoqda'; desc = "Qatlamlar pechga qo'yildi, harorat 140°C ga ko'tarilmoqda."; }
+    } else if(s.cured){
+      cls = 'is-ok'; title = 'Laminatsiya tayyor';
+      desc = "Qatlamlar yaxlit birikdi: rasm himoya oynasi ostida tiniq, namlik va chizilishdan himoyalangan.";
+    } else if(s.exploded){
+      title = 'Qatlamlar ajratilgan';
+      desc = "Oq taglik, bosma rasm, PVB plyonka va himoya oynasi — buyurtmada shunday yig'iladi.";
+    } else {
+      title = "Yig'ilgan holat";
+      desc = "Oynani sichqoncha yoki barmoq bilan aylantirib ko'ring. Pastdagi tugmalar bilan qatlamlarni ajrating yoki pechda qizdirib ko'ring.";
+    }
+    $('cvStatus').className = 'cv3-status ' + cls;
+    $('cvStatusTitle').textContent = title;
+    $('cvStatusDesc').textContent = desc;
+  }
+
+  /* ---- "Rasmni siljitish" rejimida rasmni panellar ichida surish ---- */
+  let imgDrag = null;
+  function onImageDrag(d){
+    if(!state.work || !stage3d) return;
+    if(d.phase === 'start'){ imgDrag = { px: state.view.px, py: state.view.py, k: stage3d.pxPerCm() }; return; }
+    if(d.phase === 'end'){ imgDrag = null; return; }
+    if(!imgDrag) return;
+    const fw = (frame.w / frame.scale) * imgDrag.k, fh = (frame.h / frame.scale) * imgDrag.k;   // ramkaning ekrandagi o'lchami (px)
+    state.view.px = imgDrag.px + d.dx / fw;
+    state.view.py = imgDrag.py + d.dy / fh;
+    scheduleApply();
+  }
 
   $('constructorSizes').addEventListener('click', (e) => {
     const btn = e.target.closest('.size-card');
@@ -1063,6 +1178,10 @@ document.addEventListener("DOMContentLoaded",()=>{
       $('constructorDropText').textContent = file.name;
       renderStage();
       renderLimit();
+      // Telefonda natija pastda — rasm yuklangach 3D ko'rinishga silliq o'tkazamiz.
+      if(window.matchMedia('(max-width: 860px)').matches){
+        setTimeout(() => stageWrap.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+      }
     }catch(err){
       if(err && err.status !== 401) $('constructorError').textContent = err.message || "Rasmni yuklab bo'lmadi.";
     }finally{
@@ -1387,68 +1506,36 @@ document.addEventListener("DOMContentLoaded",()=>{
     }catch(e){ /* e'tiborsiz */ }
   });
 
-  /* ---- Ramka ichida sudrash (pan) + g'ildirak / ikki barmoq bilan masshtab ---- */
-  const artworkEl = $('constructorArtwork');
-  const pointers = new Map();
-  let dragStart = null, pinchStart = null;
-
+  /* ---- Masshtab va 3D boshqaruv tugmalari ---- */
   function setZoom(z){
     state.view.zoom = Math.max(1, Math.min(4, z));
     $('ceZoom').value = Math.round(state.view.zoom*100);
     scheduleApply();
   }
 
-  artworkEl.addEventListener('pointerdown', (e) => {
-    if(!state.work || (e.pointerType === 'mouse' && e.button !== 0)) return;
-    artworkEl.setPointerCapture(e.pointerId);
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if(pointers.size === 1){
-      dragStart = { x: e.clientX, y: e.clientY, px: state.view.px, py: state.view.py, moved: false };
-    } else if(pointers.size === 2){
-      const [a, b] = [...pointers.values()];
-      pinchStart = { dist: Math.hypot(a.x-b.x, a.y-b.y), zoom: state.view.zoom };
-      if(dragStart) dragStart.moved = true;
-    }
-  });
-  artworkEl.addEventListener('pointermove', (e) => {
-    if(!pointers.has(e.pointerId)) return;
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if(pointers.size >= 2 && pinchStart){
-      const [a, b] = [...pointers.values()];
-      const d = Math.hypot(a.x-b.x, a.y-b.y);
-      if(pinchStart.dist > 0) setZoom(pinchStart.zoom * d / pinchStart.dist);
-      return;
-    }
-    if(!dragStart) return;
-    const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
-    if(!dragStart.moved && Math.hypot(dx, dy) < 5) return;
-    dragStart.moved = true;
-    editDrag.active = true;
-    artworkEl.classList.add('dragging');
-    artworkEl.style.transform = 'rotateX(0deg) rotateY(0deg)';
-    state.view.px = dragStart.px + dx / frame.w;
-    state.view.py = dragStart.py + dy / frame.h;
-    scheduleApply();
-  });
-  function endPointer(e){
-    if(!pointers.has(e.pointerId)) return;
-    pointers.delete(e.pointerId);
-    if(pointers.size < 2) pinchStart = null;
-    if(pointers.size === 0){
-      const wasTap = dragStart && !dragStart.moved && e.type === 'pointerup';
-      dragStart = null;
-      editDrag.active = false;
-      artworkEl.classList.remove('dragging');
-      if(wasTap) openZoom();      // qisqa bosish = kattalashtirib ko'rish
-    }
+  function setModeUi(m){
+    document.querySelectorAll('#cvMode button').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
   }
-  artworkEl.addEventListener('pointerup', endPointer);
-  artworkEl.addEventListener('pointercancel', endPointer);
-  artworkEl.addEventListener('wheel', (e) => {
-    if(!state.work) return;
-    e.preventDefault();
-    setZoom(state.view.zoom * (e.deltaY < 0 ? 1.08 : 1/1.08));
-  }, { passive: false });
+  $('cvMode').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if(!b || b.disabled || !stage3d) return;
+    stage3d.setMode(b.dataset.mode);
+    setModeUi(b.dataset.mode);
+  });
+  $('cvExplodeBtn').addEventListener('click', () => { if(stage3d) stage3d.toggleExplode(); });
+  $('cvHeatBtn').addEventListener('click', () => {
+    if(!stage3d) return;
+    if(stage3d.isCured()) stage3d.resetHeat(); else stage3d.startHeat();
+  });
+  $('cvZoomIn').addEventListener('click', () => {
+    if(stage3d && stage3d.getMode() === 'move') setZoom(state.view.zoom * 1.15);
+    else if(stage3d) stage3d.zoomBy(0.85);
+  });
+  $('cvZoomOut').addEventListener('click', () => {
+    if(stage3d && stage3d.getMode() === 'move') setZoom(state.view.zoom / 1.15);
+    else if(stage3d) stage3d.zoomBy(1 / 0.85);
+  });
+  $('cvResetView').addEventListener('click', () => { if(stage3d) stage3d.resetCamera(); });
 
   /* ---- Kesish (crop) oynasi ---- */
   const crop = { box: { x: 0, y: 0, w: 0, h: 0 }, ratio: null, W: 0, H: 0, drag: null };
@@ -1561,7 +1648,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   }
   mqMobile.addEventListener('change', placeEditor);
   placeEditor();
-  window.addEventListener('resize', renderStage);
 
   async function loadSizes(){
     try{
