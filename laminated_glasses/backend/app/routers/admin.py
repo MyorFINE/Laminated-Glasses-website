@@ -981,7 +981,7 @@ def delete_constructor_uploads(
 
 @router.get("/site-links")
 def admin_site_links(db: Session = Depends(get_db), _admin=Depends(security.get_current_admin)):
-    return {x.key:x.value for x in db.query(models.SiteLink).all()}
+    return {x.key:x.value for x in db.query(models.SiteLink).all() if x.key != "ctor_glass_mm"}
 
 @router.put("/site-links/{key}")
 def update_site_link(key: str, payload: LinkPayload, db: Session = Depends(get_db), _admin=Depends(security.get_current_admin)):
@@ -991,6 +991,32 @@ def update_site_link(key: str, payload: LinkPayload, db: Session = Depends(get_d
     if not item: item=models.SiteLink(key=key,value=payload.value); db.add(item)
     else: item.value=payload.value
     db.commit(); return {"key":key,"value":payload.value}
+
+
+@router.get("/constructor/settings", response_model=schemas.ConstructorSettings)
+def get_constructor_settings(db: Session = Depends(get_db), _admin=Depends(security.get_current_admin)):
+    item = db.query(models.SiteLink).filter_by(key="ctor_glass_mm").first()
+    try:
+        v = float(item.value) if item and item.value else 1.5
+    except (TypeError, ValueError):
+        v = 1.5
+    return schemas.ConstructorSettings(glass_mm=min(20.0, max(0.5, v)))
+
+
+@router.put("/constructor/settings", response_model=schemas.ConstructorSettings)
+def update_constructor_settings(
+    payload: schemas.ConstructorSettings,
+    db: Session = Depends(get_db),
+    _admin=Depends(security.get_current_admin),
+):
+    item = db.query(models.SiteLink).filter_by(key="ctor_glass_mm").first()
+    if item is None:
+        item = models.SiteLink(key="ctor_glass_mm", value=str(payload.glass_mm))
+        db.add(item)
+    else:
+        item.value = str(payload.glass_mm)
+    db.commit()
+    return payload
 
 
 @router.get("/constructor/sizes", response_model=List[schemas.ConstructorSizeAdminOut])

@@ -352,6 +352,12 @@ class ConstructorSizeUpdate(BaseModel):
         return _clean_name(v) if v is not None else v
 
 
+class ConstructorSettings(BaseModel):
+    """Konstruktor 3D ko'rinishi sozlamalari (admin boshqaradi)."""
+
+    glass_mm: float = Field(ge=0.5, le=20, default=1.5)
+
+
 class ConstructorShareOut(BaseModel):
     """Konstruktor sahifasidagi \"Share\" tugmasi bosilganda qaytadigan
     javob: ikkala rasm (asl va oynalarga bo'lingan tayyor dizayn) diskka

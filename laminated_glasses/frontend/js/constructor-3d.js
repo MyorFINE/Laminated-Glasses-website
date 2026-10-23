@@ -28,17 +28,19 @@
 
   /* Qatlam qalinliklari (sm). Oyna 1,5 mm; qog'oz (rasm) + PVB kley birgalikda 2 mm gacha.
      Tartib (orqadan oldinga): 0 rasm (orqasi oq), 1 PVB kley, 2 oyna. */
-  var THICK = [0.05, 0.15, 0.15];
+  var THICK = [0.05, 0.15, 0.15];   // THICK[2] (oyna) admin paneldan sozlanadi
   var BASE_Z = [];
-  (function () {
+  function calcBase() {
     var total = THICK.reduce(function (a, b) { return a + b; }, 0);
     var z = -total / 2;
     for (var i = 0; i < THICK.length; i++) { BASE_Z[i] = z + THICK[i] / 2; z += THICK[i]; }
-  })();
+  }
+  calcBase();
   var LOOSE_GAP = 0.07;     // qizdirishdan oldin qatlamlar orasidagi mayda tirqish
   var LAYER_NAMES = ['Rasm (orqasi oq)', 'PVB kley', 'Oyna'];
   var TAU = Math.PI * 2;
   var HEAT_MS = 6200;
+  var HEAT_TEMP = 300;      // pech harorati (°C)
 
   function hasWebGL() {
     try {
@@ -66,8 +68,8 @@
     scene.add(root);
 
     /* ---------- Yorug'lik va aks-sado muhiti ---------- */
-    scene.add(new T.HemisphereLight(0xffffff, 0x9fb4c6, 0.55));
-    var key = new T.DirectionalLight(0xffffff, 0.5);
+    scene.add(new T.HemisphereLight(0xffffff, 0x8497a8, 0.4));
+    var key = new T.DirectionalLight(0xffffff, 0.3);
     key.position.set(-120, 160, 220);
     scene.add(key);
 
@@ -92,26 +94,26 @@
     })();
 
     /* ---------- Umumiy materiallar ---------- */
-    var white = new T.MeshStandardMaterial({ color: 0xf1f3f5, roughness: 0.92, metalness: 0 });
+    var white = new T.MeshStandardMaterial({ color: 0xdfe2e5, roughness: 0.92, metalness: 0 });
     // Rasm: avval xira (blur) nusxa, qizdirilganda ustidagi tiniq nusxa ko'rinib boradi
-    var printBlurMat = new T.MeshBasicMaterial({ color: 0xcccccc });
-    var printSharpMat = new T.MeshBasicMaterial({ color: 0xcccccc, transparent: true, opacity: 0, depthWrite: false });
+    var printBlurMat = new T.MeshBasicMaterial({ color: 0x777777 });
+    var printSharpMat = new T.MeshBasicMaterial({ color: 0x777777, transparent: true, opacity: 0, depthWrite: false });
     var pvbMat = new T.MeshPhysicalMaterial({
-      color: 0xf0f3f6, roughness: 0.8, metalness: 0, transparent: true, opacity: 0.42,
-      depthWrite: false, envMap: envTex, envMapIntensity: 0.25
+      color: 0xc9d0d6, roughness: 0.8, metalness: 0, transparent: true, opacity: 0.3,
+      depthWrite: false, envMap: envTex, envMapIntensity: 0.1
     });
     var glassFaceMat = new T.MeshPhysicalMaterial({
-      color: 0xe3f1ef, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.07,
-      depthWrite: false, envMap: envTex, envMapIntensity: 0.7, clearcoat: 0.6, clearcoatRoughness: 0.05
+      color: 0xcfe3df, roughness: 0.04, metalness: 0, transparent: true, opacity: 0.025,
+      depthWrite: false, envMap: envTex, envMapIntensity: 0.3, clearcoat: 0.4, clearcoatRoughness: 0.04
     });
     var glassEdgeMat = new T.MeshPhysicalMaterial({
-      color: 0x7fbfb4, roughness: 0.2, metalness: 0, transparent: true, opacity: 0.7,
-      depthWrite: false, envMap: envTex, envMapIntensity: 0.7
+      color: 0x6fa89e, roughness: 0.2, metalness: 0, transparent: true, opacity: 0.5,
+      depthWrite: false, envMap: envTex, envMapIntensity: 0.4
     });
     var glowMat = new T.MeshBasicMaterial({
       color: 0xff5a14, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false
     });
-    var edgeLineMat = new T.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 });
+    var edgeLineMat = new T.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.16 });
 
     /* Oyna sirtidagi o'tkir akslanish (burchak o'zgarganda siljiydi) */
     var sheenTex;
@@ -126,7 +128,7 @@
         gr.addColorStop(1, 'rgba(255,255,255,0)');
         g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
       }
-      band(90, 46, 0.35); band(190, 16, 0.2);
+      band(90, 46, 0.22); band(190, 16, 0.12);
       sheenTex = new T.CanvasTexture(c);
       sheenTex.wrapS = sheenTex.wrapT = T.RepeatWrapping;
     })();
@@ -194,7 +196,18 @@
       return new T.Mesh(geo, mats);
     }
 
+    var lastList = null;
+    function setGlassMm(mm) {
+      mm = clamp(+mm || 1.5, 0.5, 20);
+      var t = round1(mm * 10) / 100;
+      if (Math.abs(THICK[2] - t) < 1e-6) return;
+      THICK[2] = t; calcBase();
+      if (lastList && lastList.length) build(lastList);
+    }
+    if (opts.glassMm) { THICK[2] = clamp(+opts.glassMm || 1.5, 0.5, 20) / 10; calcBase(); }
+
     function build(list) {
+      lastList = list;
       disposeGroup();
       panes = (list || []).map(function (p, i) { return { index: p.index || i + 1, w: +p.w, h: +p.h }; })
         .filter(function (p) { return p.w > 0 && p.h > 0; });
@@ -372,19 +385,19 @@
         }
       });
       // PVB: qizdirishdan oldin sutdek xira; qizdirilganda erib butunlay tiniq bo'ladi
-      pvbMat.opacity = lerp(0.42, 0.03, cure);
+      pvbMat.opacity = lerp(0.3, 0.015, cure);
       pvbMat.roughness = lerp(0.8, 0.05, cure);
-      pvbMat.color.setRGB(0.94 + 0.06 * cure, (0.95 + 0.05 * cure) - 0.45 * glow, (0.96 + 0.04 * cure) - 0.8 * glow);
+      pvbMat.color.setRGB(0.78 + 0.1 * cure, (0.8 + 0.1 * cure) - 0.4 * glow, (0.82 + 0.1 * cure) - 0.7 * glow);
       // Rasm: oldin biroz xira va xiralashgan, qizdirilgach tiniq va yorqin
-      var b = lerp(0.78, 1.0, cure);
+      var b = lerp(0.5, 0.84, cure);
       var rr = b, gg = b * (1 - 0.18 * glow), bb = b * (1 - 0.45 * glow);
       printBlurMat.color.setRGB(rr, gg, bb);
       printSharpMat.color.setRGB(rr, gg, bb);
       printSharpMat.opacity = clamp(cure, 0, 1);
-      glassFaceMat.opacity = lerp(0.06, 0.1, cure);
-      glassFaceMat.envMapIntensity = lerp(0.6, 1.0, cure);
-      glowMat.opacity = glow * 0.25;
-      sheenMat.opacity = lerp(0.16, 0.3, cure);
+      glassFaceMat.opacity = lerp(0.02, 0.035, cure);
+      glassFaceMat.envMapIntensity = lerp(0.25, 0.4, cure);
+      glowMat.opacity = glow * 0.12;
+      sheenMat.opacity = lerp(0.05, 0.1, cure);
       if (shadowMesh) shadowMesh.material.opacity = 1 - 0.85 * ex;
       dirty = true;
     }
@@ -412,9 +425,9 @@
       heating = true; emit();
       tween(HEAT_MS, function (p) {
         var tg, gl;
-        if (p < 0.38) { var a = easeInOut(p / 0.38); tg = lerp(22, 140, a); gl = a; }
-        else if (p < 0.62) { tg = 140; gl = 1; }
-        else { var b = easeInOut((p - 0.62) / 0.38); tg = lerp(140, 28, b); gl = 1 - b; }
+        if (p < 0.38) { var a = easeInOut(p / 0.38); tg = lerp(22, HEAT_TEMP, a); gl = a; }
+        else if (p < 0.62) { tg = HEAT_TEMP; gl = 1; }
+        else { var b = easeInOut((p - 0.62) / 0.38); tg = lerp(HEAT_TEMP, 28, b); gl = 1 - b; }
         temp = tg; glow = gl;
         cure = easeInOut((p - 0.3) / 0.42);
         applyVisuals(); emit();
@@ -666,6 +679,7 @@
 
     return {
       build: build,
+      setGlassMm: setGlassMm,
       setPrintCanvas: setPrintCanvas,
       refreshPrint: refreshPrint,
       setMode: setMode,

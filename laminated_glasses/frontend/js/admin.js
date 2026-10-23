@@ -1490,8 +1490,27 @@ document.getElementById('addConstructorSizeForm')?.addEventListener('submit', as
   }
 });
 
+async function loadCtorSettings() {
+  try {
+    const d = await apiRequest('/admin/constructor/settings');
+    const inp = document.getElementById('ctorGlassMm');
+    if (inp && d) inp.value = d.glass_mm;
+  } catch (err) { /* e'tiborsiz */ }
+}
+document.getElementById('ctorSettingsForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const box = document.getElementById('ctorSettingsError');
+  box.textContent = '';
+  const v = Number(document.getElementById('ctorGlassMm').value);
+  if (!(v >= 0.5 && v <= 20)) { box.textContent = "Qalinlik 0,5 dan 20 mm gacha bo'lishi kerak."; return; }
+  try {
+    await apiRequest('/admin/constructor/settings', { method: 'PUT', body: JSON.stringify({ glass_mm: v }) });
+    showToast('Oyna qalinligi saqlandi');
+  } catch (err) { box.textContent = err.message; }
+});
+
 document.getElementById('sideNav')?.addEventListener('click', (e) => {
-  if (e.target.closest('[data-view="constructor"]')) { loadConstructorSizes(); loadCtorUploads(); }
+  if (e.target.closest('[data-view="constructor"]')) { loadConstructorSizes(); loadCtorUploads(); loadCtorSettings(); }
 });
 
 /* ---------- Konstruktor: foydalanuvchilar yuklagan rasmlarni ko'rish va tozalash ---------- */

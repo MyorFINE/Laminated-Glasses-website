@@ -1282,7 +1282,21 @@ def delete_news_comment(
 
 @router.get("/site-links")
 def public_site_links(db: Session = Depends(get_db)):
-    return {x.key:x.value for x in db.query(models.SiteLink).all() if x.value}
+    return {x.key:x.value for x in db.query(models.SiteLink).all() if x.value and x.key != "ctor_glass_mm"}
+
+
+def read_glass_mm(db: Session) -> float:
+    item = db.query(models.SiteLink).filter_by(key="ctor_glass_mm").first()
+    try:
+        v = float(item.value) if item and item.value else 1.5
+    except (TypeError, ValueError):
+        v = 1.5
+    return min(20.0, max(0.5, v))
+
+
+@router.get("/constructor/settings", response_model=schemas.ConstructorSettings)
+def public_constructor_settings(db: Session = Depends(get_db)):
+    return schemas.ConstructorSettings(glass_mm=read_glass_mm(db))
 
 
 @router.get("/constructor/sizes", response_model=List[schemas.ConstructorSizeOut])

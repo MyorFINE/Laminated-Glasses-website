@@ -372,7 +372,7 @@
           </button>
           <button type="button" class="cv3-btn cv3-btn-heat" id="cvHeatBtn" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3.5 5 5.2 5 10a5 5 0 0 1-10 0c0-2 1-3.4 2-4.6.4 1.4 1 2 2 2.6C11 8.5 10.8 5.8 12 3z"/></svg>
-            <span><span id="cvHeatText">Qizdirish</span><small id="cvHeatSub">Pechda 140°C</small></span>
+            <span><span id="cvHeatText">Qizdirish</span><small id="cvHeatSub">Pechda 300°C</small></span>
           </button>
         </div>
         <div class="cv3-status" id="cvStatus">
@@ -950,6 +950,10 @@ document.addEventListener("DOMContentLoaded",()=>{
      Admin belgilagan har bir panel o'lchami (sm) sahnada AYNAN shu nisbatda quriladi.
      Foydalanuvchi o'lchamni o'zgartira olmaydi — faqat ustaxona qo'shgan o'lchamlardan birini tanlaydi. */
   const stageWrap = $('constructorStageWrap');
+  const ctorSettings = { glass_mm: 1.5 };
+  fetch('/api/constructor/settings').then(r => r.ok ? r.json() : null).then(d => {
+    if(d && Number(d.glass_mm) > 0){ ctorSettings.glass_mm = Number(d.glass_mm); if(stage3d) stage3d.setGlassMm(ctorSettings.glass_mm); }
+  }).catch(() => {});
   let stage3d = null, stage3dTried = false, stageSig = '', canvasFresh = false;
   let printCanvas = null, printLayer = null;
   let lastStageState = { exploded: false, heating: false, cured: false, temp: 22, progress: 0 };
@@ -967,6 +971,7 @@ document.addEventListener("DOMContentLoaded",()=>{
           labels: $('constructor3dLabels'),
           onState: onStageState,
           onImageDrag: onImageDrag,
+          glassMm: ctorSettings.glass_mm,
           onImageZoom: (f) => { if(state.work) setZoom(state.view.zoom * f); },
         });
       }
@@ -1084,19 +1089,19 @@ document.addEventListener("DOMContentLoaded",()=>{
     heatBtn.disabled = !ready || !!s.heating;
     if(s.heating){ $('cvHeatText').textContent = 'Qizdirilmoqda…'; $('cvHeatSub').textContent = Math.round(s.temp) + '°C'; }
     else if(s.cured){ $('cvHeatText').textContent = 'Qizdirilgan ✓'; $('cvHeatSub').textContent = 'Asl holatga qaytarish'; }
-    else { $('cvHeatText').textContent = 'Qizdirish'; $('cvHeatSub').textContent = 'Pechda 140°C'; }
+    else { $('cvHeatText').textContent = 'Qizdirish'; $('cvHeatSub').textContent = 'Pechda 300°C'; }
 
     const tp = $('cvTemp');
     tp.classList.toggle('on', !!s.heating);
     $('cvTempVal').textContent = Math.round(s.temp) + '°C';
-    $('cvTempBar').style.width = Math.max(0, Math.min(100, (s.temp - 22) / 118 * 100)) + '%';
+    $('cvTempBar').style.width = Math.max(0, Math.min(100, (s.temp - 22) / 278 * 100)) + '%';
 
     let cls = '', title, desc;
     if(s.heating){
       cls = 'is-hot';
-      if(s.progress >= 0.98 && s.temp < 138){ title = 'Sovutilmoqda'; desc = "Qatlamlar yaxlit birikib qotmoqda — oyna sekin sovutiladi."; }
-      else if(s.progress > 0.12){ title = "PVB plyonka erimoqda"; desc = "140°C da plyonka suyuqlanib, bosma rasm va oynani bir-biriga zich yopishtirmoqda."; }
-      else { title = 'Pech qizdirilmoqda'; desc = "Qatlamlar pechga qo'yildi, harorat 140°C ga ko'tarilmoqda."; }
+      if(s.progress >= 0.98 && s.temp < 295){ title = 'Sovutilmoqda'; desc = "Qatlamlar yaxlit birikib qotmoqda — oyna sekin sovutiladi."; }
+      else if(s.progress > 0.12){ title = "PVB plyonka erimoqda"; desc = "300°C da plyonka suyuqlanib, bosma rasm va oynani bir-biriga zich yopishtirmoqda."; }
+      else { title = 'Pech qizdirilmoqda'; desc = "Qatlamlar pechga qo'yildi, harorat 300°C ga ko'tarilmoqda."; }
     } else if(s.cured){
       cls = 'is-ok'; title = 'Laminatsiya tayyor';
       desc = "Qatlamlar yaxlit birikdi: rasm oyna ostida tiniq va yorqin, namlik va chizilishdan himoyalangan.";
