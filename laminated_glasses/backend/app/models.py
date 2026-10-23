@@ -449,3 +449,35 @@ class NewsComment(Base):
     edited_at = Column(DateTime, nullable=True)
     edit_count = Column(Integer, nullable=False, default=0, server_default="0")
     parent_id = Column(Integer, nullable=True, index=True)
+
+
+class AiConfig(Base):
+    """AI (Gemini) sozlamalari -- yagona qator. Admin panelda o'zgartiriladi.
+
+    `provider_blocked_until` -- Google "limit tugadi" (429) deb javob bergan
+    bo'lsa, shu vaqtgacha AI yangi so'rovlarni qabul qilmaydi (foydalanuvchiga
+    chiroyli tushuntirish ko'rsatiladi) va Google'ga behuda urinmaydi."""
+
+    __tablename__ = "ai_config"
+
+    id = Column(Integer, primary_key=True, default=1)
+    enabled = Column(Integer, nullable=False, default=1)
+    daily_limit = Column(Integer, nullable=False, default=40)
+    per_user_limit = Column(Integer, nullable=False, default=3)
+    provider_blocked_until = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AiUsage(Base):
+    """Har bir AI so'rovi jurnali. LIMIT shu jadval asosida (faqat status='ok'
+    yozuvlar sanaladi). Foydalanuvchi rasmlari BU YERDA SAQLANMAYDI."""
+
+    __tablename__ = "ai_usage"
+
+    id = Column(Integer, primary_key=True, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    # reserved (jarayonda) | ok | error | quota (Google limiti) | blocked (xavfsizlik filtri)
+    status = Column(String(16), nullable=False, default="reserved")
+    duration_ms = Column(Integer, nullable=False, default=0)
+    error_code = Column(String(60), nullable=True)

@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
-from .. import backup, config, config_bundle, db_admin, honeypot_state, models, schemas, security, utils
+from .. import ai_service, backup, config, config_bundle, db_admin, honeypot_state, models, schemas, security, utils
 from ..database import SessionLocal, get_db
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -1439,3 +1439,37 @@ def import_config_bundle(
         tmp_path.unlink(missing_ok=True)
 
     return result
+
+
+# ---------- AI (Gemini) sozlamalari va statistikasi ----------
+
+@router.get("/ai")
+def admin_ai_overview(
+    db: Session = Depends(get_db), _admin=Depends(security.get_current_admin)
+):
+    return ai_service.admin_overview(db)
+
+
+@router.put("/ai")
+def admin_ai_update(
+    payload: schemas.AiConfigIn,
+    db: Session = Depends(get_db),
+    _admin=Depends(security.get_current_admin),
+):
+    cfg = ai_service.get_config(db)
+    cfg.enabled = 1 if payload.enabled else 0
+    cfg.daily_limit = payload.daily_limit
+    cfg.per_user_limit = payload.per_user_limit
+    db.commit()
+    return ai_service.admin_overview(db)
+
+
+@router.post("/ai/unblock")
+def admin_ai_unblock(
+    db: Session = Depends(get_db), _admin=Depends(security.get_current_admin)
+):
+    """Google kvota to'xtatishini qo'lda bekor qiladi (masalan, tarifni oshirgandan keyin)."""
+    cfg = ai_service.get_config(db)
+    cfg.provider_blocked_until = None
+    db.commit()
+    return ai_service.admin_overview(db)

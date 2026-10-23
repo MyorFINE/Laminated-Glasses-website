@@ -205,3 +205,29 @@ CUSTOMER_TOKEN_EXPIRE_DAYS = int(os.getenv("CUSTOMER_TOKEN_EXPIRE_DAYS", "30"))
 # qilinadi -- eskirgan/o'g'irlangan tokenni qayta ishlatish (replay) oynasini
 # qisqartiradi. Google tokeni o'zi 1 soat yashaydi.
 GOOGLE_TOKEN_MAX_AGE_SECONDS = int(os.getenv("GOOGLE_TOKEN_MAX_AGE_SECONDS", "600"))
+
+# ---------------------------------------------------------------------------
+# Gemini AI: "Xonada ko'rish" -- oynani xona rasmiga realistik joylash
+# ---------------------------------------------------------------------------
+# MUHIM: GEMINI_API_KEY faqat SERVERDA (.env yoki Render "Environment") da
+# saqlanadi. Hech qachon frontendga (HTML/JS) yoki GitHub'ga yozmang -- kalit
+# ochilib qolsa, kimdir sizning hisobingizdan foydalanib, limitni tugatadi.
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+# Rasm tahrirlay oladigan model ("Nano Banana"). Kerak bo'lsa .env orqali almashtiring.
+GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image").strip()
+GEMINI_API_BASE = os.getenv(
+    "GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1beta"
+).strip().rstrip("/")
+# Gemini javobini kutish vaqti (soniya). Rasm yaratish 10-40 soniya olishi mumkin.
+GEMINI_TIMEOUT_SECONDS = max(15, int(os.getenv("GEMINI_TIMEOUT_SECONDS", "90")))
+
+# Boshlang'ich limitlar (keyin admin panelda o'zgartiriladi -- baza qiymati ustun).
+# Limit "sirpanuvchi 24 soat" oynasida hisoblanadi.
+AI_DEFAULT_DAILY_LIMIT = max(0, int(os.getenv("AI_DEFAULT_DAILY_LIMIT", "40")))        # butun sayt bo'yicha
+AI_DEFAULT_PER_USER_LIMIT = max(0, int(os.getenv("AI_DEFAULT_PER_USER_LIMIT", "3")))   # bitta Gmail uchun
+# Google "limit tugadi" (429) desa, shuncha daqiqa AI vaqtincha o'chiriladi (serverni bekorga urmaslik uchun).
+AI_PROVIDER_COOLDOWN_MINUTES = max(1, int(os.getenv("AI_PROVIDER_COOLDOWN_MINUTES", "60")))
+# AI yuboriladigan rasmlarning eng uzun tomoni (px) -- kichikroq = tezroq va arzonroq.
+AI_MAX_IMAGE_SIDE = max(512, min(2048, int(os.getenv("AI_MAX_IMAGE_SIDE", "1280"))))
+AI_MAX_UPLOAD_MB = 6
+AI_USAGE_KEEP_DAYS = 60

@@ -649,3 +649,26 @@ class AdminUserListOut(BaseModel):
 
 class StaffToggleIn(BaseModel):
     is_staff: bool
+
+
+class AiStatusOut(BaseModel):
+    """AI ko'rish imkoniyati holati (foydalanuvchi uchun)."""
+
+    available: bool
+    reason: str = ""                 # disabled | not_configured | global_limit | user_limit | provider_quota
+    title: str = ""                  # chiroyli tushuntirish sarlavhasi (available=False bo'lsa)
+    message: str = ""
+    retry_after_seconds: int = 0
+    remaining: Optional[int] = None  # shu akkaunt uchun qolgan urinishlar (admin: None)
+    per_user_limit: int = 0
+
+
+class AiPreviewOut(BaseModel):
+    image: str                       # data:image/...;base64,...
+    remaining: Optional[int] = None
+
+
+class AiConfigIn(BaseModel):
+    enabled: bool
+    daily_limit: int = Field(ge=0, le=100000)
+    per_user_limit: int = Field(ge=0, le=1000)
