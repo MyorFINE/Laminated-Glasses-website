@@ -10,9 +10,7 @@
  *  3) Natija  — oyna devorga bosib qo'yiladi; xona yorug'ligi va rangiga avtomatik moslanadi;
  *               kattalashtirish/siljitish, "Oldin / Keyin", rasmni saqlash.
  *
- * Qo'lda joylashtirish serverga YUBORILMAYDI — hammasi mijozning qurilmasida bajariladi.
- * "AI bilan ko'rish" bosilgandagina (faqat shunda) xona rasmi va joylashtirilgan ko'rinish
- * serverga, u orqali Gemini'ga yuboriladi (kalit serverda). Rasmlar serverda SAQLANMAYDI.
+ * Fotosurat serverga YUBORILMAYDI — hammasi mijozning qurilmasida bajariladi.
  *
  * Konstruktor bilan aloqa (constructor.html): window.lgConstructorAR
  *   .isReady()        -> dizayn tayyormi
@@ -42,7 +40,6 @@
     eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
     sliders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h8M16 6h4M4 12h4M12 12h8M4 18h10M18 18h2"/><circle cx="14" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></svg>',
     wall: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5l18-2v18L3 19z"/><path d="M3 5l0 14"/></svg>',
-    sparkle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>',
     save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5"/><path d="M4 19h16"/></svg>',
   };
 
@@ -85,35 +82,16 @@
           '<span id="arZoomVal">×1</span>' +
         '</div>' +
         '<button type="button" class="ar-before" id="arBefore" hidden title="Bosib turing (B)">' + ICON.eye + '<span>Oldin / Keyin</span></button>' +
-        '<img class="ar-ai-img" id="arAiImg" alt="AI natijasi" hidden>' +
-        '<span class="ar-ai-badge" id="arAiBadge" hidden>' + ICON.sparkle + 'AI natijasi</span>' +
-        '<div class="ar-ai-loading" id="arAiLoading" hidden role="status" aria-live="polite">' +
-          '<div class="ar-ai-card">' +
-            '<div class="ar-ai-orb" aria-hidden="true"><i></i><i></i><i></i></div>' +
-            '<strong id="arAiLoadT">AI ishlamoqda…</strong>' +
-            '<span id="arAiLoadS">Xona yorug\'ligi tahlil qilinmoqda</span>' +
-            '<small>Odatda 15–40 soniya oladi. Oynani yopmang.</small>' +
-            '<button type="button" class="ar-link" id="arAiCancel">Bekor qilish</button>' +
-          '</div>' +
-        '</div>' +
-        '<div class="ar-ai-dlg" id="arAiDlg" hidden role="alertdialog" aria-modal="true" aria-labelledby="arAiDlgT">' +
-          '<div class="ar-ai-card ar-ai-card-dlg">' +
-            '<div class="ar-ai-dlg-ic" aria-hidden="true">' + ICON.sparkle + '</div>' +
-            '<strong id="arAiDlgT"></strong>' +
-            '<p id="arAiDlgM"></p>' +
-            '<button type="button" class="ar-btn ar-btn-main" id="arAiDlgOk">Tushunarli</button>' +
-          '</div>' +
-        '</div>' +
       '</div>' +
       '<aside class="ar-panel" id="arPanel" hidden>' +
         /* 2-qadam: devorni belgilash */
         '<section class="ar-step" id="arStepMark" hidden>' +
           '<h4 class="ar-h">Devorni belgilang</h4>' +
-          '<p class="ar-note">Devordagi biror <b>to\'rtburchak</b> (eshik, devorning bir qismi, pol–shift) <b>4 burchagini</b> rasmda bosing. Uning haqiqiy o\'lchamini kiriting — oyna shu devor perspektivasida, aniq o\'lchamda chiqadi.</p>' +
+          '<p class="ar-note">Devordagi biror <b>to\'rtburchak</b> (eshik, devorning bir qismi, pol–shift) <b>4 burchagini</b> rasmda bosing. Uning <b>eni</b>ni (sm) kiriting — bo\'yi avtomatik hisoblanadi. Oyna belgilangan joyning markaziga, devor perspektivasida joylashadi.</p>' +
           '<label class="ar-field"><span>Nimani belgilayapsiz?</span>' +
             '<select id="arPlaneRef">' +
               '<option value="door">Eshik (90 × 200 sm)</option>' +
-              '<option value="wall">Devor bo\'lagi / pol–shift</option>' +
+              '<option value="wall">Devor bo\'lagi (bo\'yi avtomatik)</option>' +
               '<option value="a4">A4 qog\'oz (21 × 29.7 sm)</option>' +
               '<option value="custom">Boshqa narsa</option>' +
             '</select></label>' +
@@ -144,28 +122,11 @@
             '<label class="ar-check"><input type="checkbox" id="arAuto" checked> Xona yorug\'ligi va rangiga moslash</label>' +
             '<button type="button" class="ar-link" id="arResetAdj">Sozlamalarni tiklash</button>' +
           '</div>' +
-          '<div class="ar-ai" id="arAi">' +
-            '<button type="button" class="ar-btn ar-btn-ai" id="arAiBtn">' + ICON.sparkle + '<span id="arAiBtnT">AI bilan realistik ko\'rish</span></button>' +
-            '<div class="ar-ai-note" id="arAiNote">Oynani devorning kerakli joyiga qo\'ydingizmi? AI yorug\'lik, soya va aksni xonangizga moslab beradi.</div>' +
-          '</div>' +
           '<div class="ar-actions ar-actions-col">' +
             '<button type="button" class="ar-btn ar-btn-main" id="arSave">' + ICON.save + 'Rasmni saqlash</button>' +
             '<div class="ar-row2">' +
               '<button type="button" class="ar-btn" id="arPlaneBtn">' + ICON.wall + '<span id="arPlaneBtnT">Devorni belgilash</span></button>' +
               '<button type="button" class="ar-btn" id="arNewPhoto">' + ICON.upload + 'Boshqa rasm</button>' +
-            '</div>' +
-          '</div>' +
-        '</section>' +
-        /* 4-qadam: AI natijasi */
-        '<section class="ar-step" id="arStepAi" hidden>' +
-          '<h4 class="ar-h">AI natijasi</h4>' +
-          '<p class="ar-note">Oyna xonangiz yorug\'ligiga, soyasiga va ranglariga moslab joylandi. <b>«Oldin / Keyin»</b> tugmasini bosib turib asl rasm bilan solishtiring.</p>' +
-          '<div class="ar-ai-note ar-ai-left" id="arAiNote2"></div>' +
-          '<div class="ar-actions ar-actions-col">' +
-            '<button type="button" class="ar-btn ar-btn-main" id="arAiSave">' + ICON.save + 'Rasmni saqlash</button>' +
-            '<div class="ar-row2">' +
-              '<button type="button" class="ar-btn" id="arAiBack">' + ICON.sliders + 'Qo\'lda tahrirlash</button>' +
-              '<button type="button" class="ar-btn" id="arAiAgain">' + ICON.sparkle + 'Qayta yaratish</button>' +
             '</div>' +
           '</div>' +
         '</section>' +
@@ -190,7 +151,6 @@
       // umumiy
       rot: 0, light: 100, tint: null, showDim: true, auto: true, before: false,
       tex: null, quad: null, raf: 0,
-      ai: { status: null, busy: false, ctrl: null, timer: 0, hasResult: false },
     };
   }
 
@@ -214,7 +174,7 @@
 
   function close() {
     if (!root || root.hidden) return;
-    if (S) { cancelAnimationFrame(S.raf); S.raf = 0; aiAbort(); }
+    if (S) { cancelAnimationFrame(S.raf); S.raf = 0; }
     root.classList.remove('open');
     root.hidden = true;
     document.body.classList.remove('ar-lock');
@@ -258,13 +218,10 @@
     $('arPanel').hidden = (m === 'upload');
     $('arStepMark').hidden = (m !== 'mark');
     $('arStepPlace').hidden = (m !== 'place');
-    $('arStepAi').hidden = (m !== 'ai');
-    $('arTools').hidden = (m === 'upload' || m === 'ai');
-    $('arBefore').hidden = (m !== 'place' && m !== 'ai');
-    $('arAiImg').hidden = (m !== 'ai'); $('arAiBadge').hidden = (m !== 'ai');
-    if (m === 'place') aiRefreshStatus();
+    $('arTools').hidden = (m === 'upload');
+    $('arBefore').hidden = (m !== 'place');
     Array.prototype.forEach.call($('arStepper').children, function (li) {
-      var order = { upload: 1, mark: 2, place: 3, ai: 3 }, me = order[li.getAttribute('data-s')], cur = order[m];
+      var order = { upload: 1, mark: 2, place: 3 }, me = order[li.getAttribute('data-s')], cur = order[m];
       li.classList.toggle('on', me === cur); li.classList.toggle('done', me < cur);
     });
     updateHint();
@@ -285,8 +242,8 @@
 
   function enterMark() {
     S.markPts = []; S.plane = null; S.pp = null;
-    applyPreset('door');
-    $('arPlaneRef').value = 'door';
+    applyPreset('wall');
+    $('arPlaneRef').value = 'wall';
     setMode('mark');
     updateMarkUi();
   }
@@ -294,6 +251,25 @@
   function applyPreset(k) {
     var P = { door: [90, 200], a4: [21, 29.7], wall: [300, 260] }[k];
     if (P) { $('arPlaneW').value = P[0]; $('arPlaneH').value = P[1]; }
+    S.autoH = (k === 'wall');          // devor bo'lagi: bo'yi belgilangan burchaklardan avtomatik hisoblanadi
+  }
+
+  // 4 burchakdan to'rtburchakning HAQIQIY nisbatini (bo'yi / eni) baholaydi (perspektivani hisobga olib).
+  function estimateRatio(dst) {
+    var Hu = solveH([[0, 0], [1, 0], [1, 1], [0, 1]], dst);
+    if (!Hu) return null;
+    var cx = S.cw / 2, cy = S.ch / 2, m = Math.max(S.cw, S.ch);
+    var a1 = Hu[0] - cx * Hu[6], b1 = Hu[3] - cy * Hu[6], c1 = Hu[6];
+    var a2 = Hu[1] - cx * Hu[7], b2 = Hu[4] - cy * Hu[7], c2 = Hu[7];
+    var f = 0.9 * m;
+    if (Math.abs(c1 * c2) > 1e-12) {
+      var f2 = -(a1 * a2 + b1 * b2) / (c1 * c2);
+      if (f2 > 0) { var fe = Math.sqrt(f2); if (fe > 0.4 * m && fe < 3 * m) f = fe; }
+    }
+    var n1 = Math.sqrt((a1 * a1 + b1 * b1) / (f * f) + c1 * c1);
+    var n2 = Math.sqrt((a2 * a2 + b2 * b2) / (f * f) + c2 * c2);
+    if (!(n1 > 0 && n2 > 0)) return null;
+    return Math.max(0.05, Math.min(20, n2 / n1));
   }
 
   function updateMarkUi() {
@@ -312,7 +288,7 @@
     S.rot = 0; $('arRot').value = 0; $('arRotOut').textContent = '0°';
     autoLight();
     setMode('place');
-    placeDefault();
+    S.pp = { x: S.plane.w / 2, y: S.plane.h / 2 };      // oyna belgilangan devorning aynan markaziga
     requestRender();
   }
 
@@ -387,8 +363,20 @@
     S.planeTmp = null;
     if (S.markPts.length < 4) return false;
     var w = parseFloat($('arPlaneW').value), h = parseFloat($('arPlaneH').value);
-    if (!(w > 0 && h > 0)) return false;
     var dst = orderCorners(S.markPts.map(function (p) { return [p.x * S.cw, p.y * S.ch]; }));
+    var ratio = estimateRatio(dst);
+    if (ratio) {
+      var ref = $('arPlaneRef').value;
+      // Eshik/A4 deb tanlangan, lekin belgilangan joy shunga o'xshamasa — devor deb olib, bo'yini o'zi hisoblaymiz.
+      if ((ref === 'door' || ref === 'a4') && w > 0 && h > 0 && Math.abs(Math.log(ratio / (h / w))) > 0.35) {
+        $('arPlaneRef').value = 'wall'; applyPreset('wall'); w = parseFloat($('arPlaneW').value);
+      }
+      if (S.autoH && w > 0) {
+        h = Math.round(w * ratio);
+        if (String($('arPlaneH').value) !== String(h)) $('arPlaneH').value = h;
+      }
+    }
+    if (!(w > 0 && h > 0)) return false;
     // qavariqlik: barcha burilishlar bir tomonga
     for (var i = 0; i < 4; i++) {
       var p0 = dst[i], p1 = dst[(i + 1) % 4], p2 = dst[(i + 2) % 4];
@@ -452,7 +440,6 @@
     if (S.cw === w && S.ch === h && S.dpr === dpr && canvas.width === Math.round(w * dpr)) { requestRender(); return; }
     S.cw = w; S.ch = h; S.dpr = dpr;
     canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
-    var ai = $('arAiImg'); if (ai) { ai.style.width = w + 'px'; ai.style.height = h + 'px'; }
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     clampView();
     requestRender();
@@ -841,28 +828,19 @@
 
   /* ================================================================ saqlash */
   async function save() {
-    if (!S || (S.mode !== 'place' && S.mode !== 'ai')) return;
+    if (!S || S.mode !== 'place') return;
+    S.before = false; render();
     var out = document.createElement('canvas');
+    out.width = canvas.width; out.height = canvas.height;
     var g = out.getContext('2d');
-    if (S.mode === 'ai') {
-      var im = $('arAiImg');
-      if (!im || !im.naturalWidth) return;
-      out.width = im.naturalWidth; out.height = im.naturalHeight;
-      g = out.getContext('2d');
-      g.drawImage(im, 0, 0);
-    } else {
-      S.before = false; render();
-      out.width = canvas.width; out.height = canvas.height;
-      g = out.getContext('2d');
-      g.drawImage(canvas, 0, 0);
-    }
+    g.drawImage(canvas, 0, 0);
     var fs = Math.max(12, Math.round(out.width * 0.017));      // nozik belgi (watermark)
     g.font = '700 ' + fs + 'px Manrope, system-ui, sans-serif'; g.textAlign = 'right'; g.textBaseline = 'bottom';
     g.fillStyle = 'rgba(255,255,255,0.62)'; g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowBlur = fs * 0.5;
     g.fillText('Laminated Glasses', out.width - fs, out.height - fs * 0.8);
     var blob = await new Promise(function (res) { out.toBlob(res, 'image/jpeg', 0.95); });
     if (!blob) { toast("Rasmni saqlab bo'lmadi.", true); return; }
-    var name = (S.mode === 'ai' ? 'oyna-xonamda-ai-' : 'oyna-xonamda-') + new Date().toISOString().slice(0, 10) + '.jpg';
+    var name = 'oyna-xonamda-' + new Date().toISOString().slice(0, 10) + '.jpg';
     try {
       var file = new File([blob], name, { type: 'image/jpeg' });
       if (window.matchMedia('(pointer:coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -876,219 +854,6 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
     toast('Rasm yuklab olindi.');
-  }
-
-
-  /* ============================================================== AI (Gemini) */
-  var AI_SIDE = 1280;       // serverga yuboriladigan rasmning eng uzun tomoni (px)
-  var AI_STEPS = [
-    "Xona yorug'ligi tahlil qilinmoqda",
-    "Oyna devorga joylanmoqda",
-    "Soya va akslar moslanmoqda",
-    "Ranglar va detallar yakunlanmoqda"
-  ];
-
-  // Backend javobini (xato tafsilotlari bilan) o'qiydigan alohida so'rov yordamchisi.
-  async function aiFetch(path, opts) {
-    opts = opts || {};
-    var token = (typeof state !== 'undefined' && state && state.token) ? state.token : null;
-    var base = (typeof API_BASE_URL !== 'undefined') ? API_BASE_URL : '/api';
-    var res;
-    try {
-      res = await fetch(base + path, {
-        method: opts.method || 'GET', body: opts.body, signal: opts.signal,
-        headers: token ? { Authorization: 'Bearer ' + token } : {}
-      });
-    } catch (e) {
-      if (e && e.name === 'AbortError') throw e;
-      var ne = new Error('network'); ne.network = true; throw ne;
-    }
-    var data = null;
-    try { data = await res.json(); } catch (e) { data = null; }
-    if (!res.ok) {
-      var err = new Error('http'); err.status = res.status;
-      err.detail = data && data.detail;
-      if (res.status === 401 && typeof endSession === 'function') endSession(false);
-      throw err;
-    }
-    return data;
-  }
-
-  function fmtWait(sec) {
-    var m = Math.max(1, Math.round(sec / 60));
-    if (m < 60) return m + ' daqiqa';
-    var h = Math.round(m / 60); return h + ' soat';
-  }
-
-  function aiDialog(title, message) {
-    $('arAiDlgT').textContent = title || "AI hozircha mavjud emas";
-    $('arAiDlgM').textContent = message || '';
-    $('arAiDlg').hidden = false;
-    setTimeout(function () { var b = $('arAiDlgOk'); if (b) b.focus({ preventScroll: true }); }, 50);
-  }
-
-  function aiApplyStatus(st) {
-    if (!S) return;
-    S.ai.status = st;
-    var btn = $('arAiBtn'), note = $('arAiNote'), t = $('arAiBtnT');
-    btn.classList.toggle('is-off', !st.available);
-    if (st.available) {
-      t.textContent = "AI bilan realistik ko'rish";
-      note.classList.remove('ar-ai-warn');
-      note.textContent = (st.remaining != null)
-        ? "Oynani devorning kerakli joyiga qo'ydingizmi? AI yorug'lik, soya va aksni xonangizga moslaydi. Qolgan urinishlar: " + st.remaining + " / " + st.per_user_limit + "."
-        : "Oynani devorning kerakli joyiga qo'ydingizmi? AI yorug'lik, soya va aksni xonangizga moslaydi.";
-    } else {
-      t.textContent = "AI hozircha mavjud emas";
-      note.classList.add('ar-ai-warn');
-      note.textContent = st.message || '';
-    }
-    var n2 = $('arAiNote2');
-    if (n2) n2.textContent = (st.available && st.remaining != null) ? ('Qolgan AI urinishlar: ' + st.remaining + ' / ' + st.per_user_limit) : (st.available ? '' : (st.title || ''));
-  }
-
-  async function aiRefreshStatus() {
-    if (!S) return;
-    var mine = S;
-    try {
-      var st = await aiFetch('/constructor/ai-status');
-      if (S === mine) aiApplyStatus(st);
-    } catch (e) {
-      if (S !== mine) return;
-      // Server javob bermasa: tugma ishlayveradi, xatoni bosilganda ko'rsatamiz.
-      mine.ai.status = null;
-    }
-  }
-
-  function canvasToBlob(c, type, q) { return new Promise(function (res) { c.toBlob(res, type, q); }); }
-
-  function scaledCanvas(src, maxSide) {
-    var w = src.width, h = src.height, k = Math.min(1, maxSide / Math.max(w, h));
-    var c = document.createElement('canvas');
-    c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
-    var g = c.getContext('2d');
-    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);   // JPEG uchun shaffoflik yo'q
-    g.drawImage(src, 0, 0, c.width, c.height);
-    return c;
-  }
-
-  // Qo'lda joylashtirilgan ko'rinishni (zoom/pan'siz, yozuv va belgilarsiz) rasmga oladi.
-  function captureGuide() {
-    var keep = { z: S.z, tx: S.tx, ty: S.ty, before: S.before, dim: S.showDim };
-    S.z = 1; S.tx = 0; S.ty = 0; S.before = false; S.showDim = false;
-    render();
-    var c = scaledCanvas(canvas, AI_SIDE);
-    S.z = keep.z; S.tx = keep.tx; S.ty = keep.ty; S.before = keep.before; S.showDim = keep.dim;
-    requestRender();
-    return c;
-  }
-
-  function aiAbort() {
-    var a = S && S.ai;
-    if (!a) return;
-    if (a.ctrl) { try { a.ctrl.abort(); } catch (e) {} }
-    aiLoading(false);
-  }
-
-  function aiLoading(on) {
-    if (!S) return;
-    var el = $('arAiLoading');
-    clearInterval(S.ai.timer); S.ai.timer = 0;
-    if (!on) { el.hidden = true; S.ai.busy = false; $('arAiBtn').disabled = false; $('arAiAgain').disabled = false; return; }
-    S.ai.busy = true; el.hidden = false;
-    $('arAiBtn').disabled = true; $('arAiAgain').disabled = true;
-    var i = 0, sub = $('arAiLoadS');
-    sub.textContent = AI_STEPS[0];
-    S.ai.timer = setInterval(function () { i = Math.min(AI_STEPS.length - 1, i + 1); sub.textContent = AI_STEPS[i]; }, 5500);
-  }
-
-  async function aiGenerate() {
-    if (!S || !S.tex || !S.photoSrc || S.ai.busy) return;
-    if (S.mode !== 'place' && S.mode !== 'ai') return;
-    var mine = S;
-
-    // Limit/holatni oldindan tekshiramiz -- tugagan bo'lsa, chiroyli tushuntirish.
-    if (!S.ai.status) await aiRefreshStatus();
-    if (S !== mine) return;
-    if (S.ai.status && !S.ai.status.available) { aiDialog(S.ai.status.title, S.ai.status.message); return; }
-
-    var returnMode = S.mode;
-    if (returnMode === 'ai') { S.before = false; $('arAiImg').style.visibility = 'visible'; }
-    var form = new FormData();
-    try {
-      // Qayta yaratishda guide uchun avval 'place' ko'rinishiga qaytmaymiz: manual joylashuv holati S'da saqlangan.
-      var prevMode = S.mode; S.mode = 'place';
-      var guideCanvas = captureGuide();
-      S.mode = prevMode;
-      var roomCanvas = scaledCanvas(S.photoSrc, AI_SIDE);
-      var artCanvas = null;
-      if (S.tex.canvas) {
-        artCanvas = document.createElement('canvas');
-        var kk = Math.min(1, 1024 / Math.max(S.tex.canvas.width, S.tex.canvas.height));
-        artCanvas.width = Math.max(1, Math.round(S.tex.canvas.width * kk)); artCanvas.height = Math.max(1, Math.round(S.tex.canvas.height * kk));
-        artCanvas.getContext('2d').drawImage(S.tex.canvas, 0, 0, artCanvas.width, artCanvas.height);
-      }
-      var rb = await canvasToBlob(roomCanvas, 'image/jpeg', 0.88);
-      var gb = await canvasToBlob(guideCanvas, 'image/jpeg', 0.9);
-      var ab = artCanvas ? await canvasToBlob(artCanvas, 'image/png') : null;
-      if (!rb || !gb) throw new Error('blob');
-      form.append('room', rb, 'room.jpg');
-      form.append('guide', gb, 'guide.jpg');
-      if (ab) form.append('artwork', ab, 'art.png');
-      form.append('glass_w_cm', String(round1(S.tex.wCm)));
-      form.append('glass_h_cm', String(round1(S.tex.hCm)));
-      form.append('pane_count', String((S.tex.panes && S.tex.panes.length) || (S.tex.rects && S.tex.rects.length) || 1));
-      form.append('light', String(Math.round(S.light)));
-      form.append('room_w', String(roomCanvas.width));
-      form.append('room_h', String(roomCanvas.height));
-    } catch (e) {
-      S.mode = returnMode;
-      toast("Rasmni tayyorlab bo'lmadi. Qayta urinib ko'ring.", true);
-      return;
-    }
-
-    var ctrl = new AbortController();
-    S.ai.ctrl = ctrl;
-    aiLoading(true);
-    try {
-      var out = await aiFetch('/constructor/ai-preview', { method: 'POST', body: form, signal: ctrl.signal });
-      if (S !== mine) return;
-      await new Promise(function (resolve, reject) {
-        var im = $('arAiImg');
-        im.onload = resolve; im.onerror = function () { reject(new Error('img')); };
-        im.style.visibility = 'visible';
-        im.src = out.image;
-      });
-      aiLoading(false);
-      S.ai.hasResult = true;
-      S.before = false;
-      setMode('ai');
-      var st = S.ai.status || { available: true, per_user_limit: 0 };
-      st.remaining = out.remaining; S.ai.status = st;
-      aiApplyStatus(Object.assign({}, st, { available: true }));
-    } catch (e) {
-      if (S !== mine) return;
-      aiLoading(false);
-      if (e && e.name === 'AbortError') return;                       // foydalanuvchi bekor qildi
-      var d = e && e.detail;
-      if (d && typeof d === 'object' && d.message) {
-        aiDialog(d.title, d.message);
-        if (e.status === 429 || d.code === 'not_configured') aiRefreshStatus();
-      } else if (e && e.network) {
-        aiDialog("Internet aloqasi uzildi", "Serverga ulanib bo'lmadi. Aloqani tekshirib, qayta urinib ko'ring. Bu urinish limitingizdan hisoblanmadi.");
-      } else if (e && e.status === 403) {
-        aiDialog("Avval dizaynni boshlang", typeof d === 'string' ? d : "Konstruktorda rasm yuklab, dizaynni boshlang.");
-      } else if (e && e.status === 429) {
-        aiDialog("Juda ko'p so'rov", "Birozdan so'ng qayta urinib ko'ring.");
-      } else if (e && e.status === 413) {
-        aiDialog("Rasm juda katta", "Boshqa, kichikroq rasm bilan urinib ko'ring.");
-      } else {
-        aiDialog("AI hozir javob bermadi", "Xizmat vaqtincha ishlamayapti. Birozdan so'ng qayta urinib ko'ring — bu urinish limitingizdan hisoblanmadi.");
-      }
-    } finally {
-      if (S === mine) { mine.ai.ctrl = null; }
-    }
   }
 
   /* ============================================================== tadbirlar */
@@ -1109,7 +874,12 @@
 
     // 2-qadam
     $('arPlaneRef').addEventListener('change', function (e) { applyPreset(e.target.value); updateMarkUi(); });
-    ['arPlaneW', 'arPlaneH'].forEach(function (id) { $(id).addEventListener('input', function () { $('arPlaneRef').value = 'custom'; updateMarkUi(); }); });
+    $('arPlaneW').addEventListener('input', function () {
+      var r = $('arPlaneRef').value;
+      if (r !== 'wall') { $('arPlaneRef').value = 'custom'; S.autoH = false; }
+      updateMarkUi();
+    });
+    $('arPlaneH').addEventListener('input', function () { $('arPlaneRef').value = 'custom'; S.autoH = false; updateMarkUi(); });
     $('arMarkClear').addEventListener('click', function () { S.markPts = []; updateMarkUi(); });
     $('arMarkOk').addEventListener('click', confirmMark);
     $('arMarkSkip').addEventListener('click', enterQuick);
@@ -1145,22 +915,9 @@
 
     // Oldin / Keyin — bosib turish
     var bf = $('arBefore');
-    function setBefore(v) {
-      if (!S) return;
-      S.before = v; bf.classList.toggle('on', v);
-      if (S.mode === 'ai') { $('arAiImg').style.visibility = v ? 'hidden' : 'visible'; }
-      requestRender();
-    }
+    function setBefore(v) { if (S) { S.before = v; bf.classList.toggle('on', v); requestRender(); } }
     bf.addEventListener('pointerdown', function (e) { e.preventDefault(); setBefore(true); });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { bf.addEventListener(ev, function () { setBefore(false); }); });
-
-    // AI
-    $('arAiBtn').addEventListener('click', aiGenerate);
-    $('arAiAgain').addEventListener('click', aiGenerate);
-    $('arAiBack').addEventListener('click', function () { if (S) { S.before = false; setMode('place'); requestRender(); } });
-    $('arAiSave').addEventListener('click', save);
-    $('arAiCancel').addEventListener('click', aiAbort);
-    $('arAiDlgOk').addEventListener('click', function () { $('arAiDlg').hidden = true; });
 
     // Ko'rinish
     $('arZoomIn').addEventListener('click', function () { if (S) zoomAt(S.cw / 2, S.ch / 2, 1.4); });

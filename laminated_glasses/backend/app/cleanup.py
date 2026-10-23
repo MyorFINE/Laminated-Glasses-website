@@ -100,17 +100,6 @@ async def _run_periodically(name: str, interval_seconds: int, func) -> None:
             raise
 
 
-def purge_ai_usage() -> int:
-    """AI jurnalidagi eski yozuvlar (config.AI_USAGE_KEEP_DAYS dan eski)."""
-    from . import ai_service
-
-    db = SessionLocal()
-    try:
-        return ai_service.purge_old_usage(db)
-    finally:
-        db.close()
-
-
 def start_background_cleanup_tasks() -> list:
     """Davriy tozalash vazifasini fon rejimida ishga tushiradi va yaratilgan
     asyncio Task obyektlari ro'yxatini qaytaradi."""
@@ -121,8 +110,5 @@ def start_background_cleanup_tasks() -> list:
                 config.CLEANUP_CHECK_MINUTES * 60,
                 purge_constructor_previews,
             )
-        ),
-        asyncio.create_task(
-            _run_periodically("ai_jurnal", 6 * 3600, purge_ai_usage)
         ),
     ]

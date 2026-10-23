@@ -48,8 +48,6 @@ _INDEX_MIGRATIONS = [
     "CREATE INDEX IF NOT EXISTS ix_visit_date_device ON visit_logs (visit_date, device_id)",
     "CREATE INDEX IF NOT EXISTS ix_security_kind_created ON security_events (kind, created_at)",
     "CREATE INDEX IF NOT EXISTS ix_ctor_usage_customer_used ON constructor_usage (customer_id, used_at)",
-    "CREATE INDEX IF NOT EXISTS ix_ai_usage_status_created ON ai_usage (status, created_at)",
-    "CREATE INDEX IF NOT EXISTS ix_ai_usage_customer_created ON ai_usage (customer_id, created_at)",
 ]
 
 _BACKFILLS = [

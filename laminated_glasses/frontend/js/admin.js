@@ -1491,76 +1491,7 @@ document.getElementById('addConstructorSizeForm')?.addEventListener('submit', as
 });
 
 document.getElementById('sideNav')?.addEventListener('click', (e) => {
-  if (e.target.closest('[data-view="constructor"]')) { loadConstructorSizes(); loadCtorUploads(); loadAdminAi(); }
-});
-
-/* ---------- Konstruktor: AI (Gemini) limitlari va statistikasi ---------- */
-
-function renderAdminAi(d) {
-  const badge = document.getElementById('aiAdminBadge');
-  const warn = document.getElementById('aiAdminWarn');
-  if (!badge) return;
-  let label = 'Faol', color = '#1f8f5f';
-  if (!d.configured) { label = 'Kalit kiritilmagan'; color = '#b33a3a'; }
-  else if (!d.enabled) { label = "O'chirilgan"; color = '#8a8a8a'; }
-  else if (d.provider_blocked_until) { label = 'Google limiti tugagan'; color = '#c77a14'; }
-  else if (d.used_24h >= d.daily_limit) { label = 'Kunlik limit tugagan'; color = '#c77a14'; }
-  badge.textContent = label;
-  badge.style.cssText += `;background:${color}1a;color:${color};border:1px solid ${color}55;padding:5px 12px;border-radius:999px;font-weight:700;font-size:12.5px;`;
-
-  const msgs = [];
-  if (!d.configured) msgs.push("GEMINI_API_KEY serverda (.env yoki Render → Environment) kiritilmagan — AI mijozlarga \"hozircha mavjud emas\" deb ko'rinadi.");
-  if (d.provider_blocked_until) msgs.push("Google kvotasi tugagani aniqlandi, AI vaqtincha to'xtatilgan (" + new Date(d.provider_blocked_until).toLocaleTimeString() + " gacha).");
-  warn.style.display = msgs.length ? 'block' : 'none';
-  warn.innerHTML = msgs.map(escapeHtml).join('<br>');
-
-  const cell = (v, t) => `<div style="padding:12px 14px;border-radius:12px;background:var(--surface-2,#f1f6fa);"><div style="font-size:1.35rem;font-weight:800;">${escapeHtml(v)}</div><div style="font-size:12px;color:var(--muted,#6d8294);">${escapeHtml(t)}</div></div>`;
-  document.getElementById('aiAdminStats').innerHTML =
-    cell(d.used_24h + ' / ' + d.daily_limit, "24 soatda ishlatildi") +
-    cell(d.ok_24h, 'Muvaffaqiyatli') +
-    cell(d.error_24h + d.blocked_24h, 'Xato / rad etilgan') +
-    cell(d.quota_24h, 'Google limiti (429)') +
-    cell(d.avg_seconds + ' s', "O'rtacha vaqt");
-
-  const max = Math.max(1, ...d.week.map((w) => w.ok + w.failed));
-  document.getElementById('aiAdminWeek').innerHTML = d.week.map((w) => {
-    const h = Math.max(4, Math.round(((w.ok + w.failed) / max) * 60));
-    return `<div title="${escapeHtml(w.date)}: ${w.ok} ok, ${w.failed} xato" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted,#6d8294);"><div style="width:100%;max-width:38px;height:${h}px;border-radius:6px;background:linear-gradient(180deg,#3aa0e6,#2f6fd1);opacity:${w.ok + w.failed ? 1 : .25};"></div>${escapeHtml(w.date.slice(5))}</div>`;
-  }).join('');
-
-  document.getElementById('aiDailyLimit').value = d.daily_limit;
-  document.getElementById('aiPerUserLimit').value = d.per_user_limit;
-  document.getElementById('aiEnabled').checked = !!d.enabled;
-  document.getElementById('aiUnblockBtn').style.display = d.provider_blocked_until ? '' : 'none';
-}
-
-async function loadAdminAi() {
-  if (!document.getElementById('aiAdminCard')) return;
-  try { renderAdminAi(await apiRequest('/admin/ai')); }
-  catch (err) { const b = document.getElementById('aiAdminError'); if (b) b.textContent = err.message; }
-}
-
-document.getElementById('aiAdminForm')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const errBox = document.getElementById('aiAdminError');
-  errBox.textContent = '';
-  try {
-    const d = await apiRequest('/admin/ai', {
-      method: 'PUT',
-      body: JSON.stringify({
-        enabled: document.getElementById('aiEnabled').checked,
-        daily_limit: parseInt(document.getElementById('aiDailyLimit').value, 10) || 0,
-        per_user_limit: parseInt(document.getElementById('aiPerUserLimit').value, 10) || 0,
-      }),
-    });
-    renderAdminAi(d);
-    showToast('AI sozlamalari saqlandi');
-  } catch (err) { errBox.textContent = err.message; }
-});
-
-document.getElementById('aiUnblockBtn')?.addEventListener('click', async () => {
-  try { renderAdminAi(await apiRequest('/admin/ai/unblock', { method: 'POST' })); showToast('AI qayta yoqildi'); }
-  catch (err) { showToast(err.message, true); }
+  if (e.target.closest('[data-view="constructor"]')) { loadConstructorSizes(); loadCtorUploads(); }
 });
 
 /* ---------- Konstruktor: foydalanuvchilar yuklagan rasmlarni ko'rish va tozalash ---------- */

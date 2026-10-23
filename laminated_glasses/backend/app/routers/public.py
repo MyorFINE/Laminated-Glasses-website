@@ -5,11 +5,9 @@ faqat bitta joyda -- buyurtmani rasmiylashtirish (checkout) javobida beriladi.
 """
 
 from datetime import datetime, timedelta
-import base64
 import html
 import json
 import threading
-import time
 from urllib.parse import unquote_plus
 from typing import List, Optional
 
@@ -18,7 +16,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .. import ai_gemini, ai_service, config, google_auth, honeypot_state, models, schemas, security, shield, utils
+from .. import config, google_auth, honeypot_state, models, schemas, security, shield, utils
 from ..database import get_db
 
 router = APIRouter(tags=["Public"])
@@ -1436,127 +1434,6 @@ async def share_constructor_preview(
         final_image_url=final_url,
         message_text=message_text,
     )
-
-
-# ---------- AI bilan realistik ko'rish (Gemini) ----------
-#
-# Oqim: mijoz xona rasmini yuklaydi, oynani devorga QO'LDA joylashtiradi,
-# "AI bilan ko'rish"ni bosadi -> brauzer (1) xona rasmi, (2) oyna joylashtirilgan
-# ko'rinish va (3) dizayn rasmini yuboradi -> Gemini yorug'lik/soya/aksni moslab
-# realistik natija qaytaradi. Kalit faqat serverda. Limitlar: ai_service.py.
-
-_AI_MAX_BYTES = config.AI_MAX_UPLOAD_MB * 1024 * 1024
-
-
-def _read_ai_image(upload: UploadFile, kind: str, label: str) -> bytes:
-    data = upload.file.read(_AI_MAX_BYTES + 1)
-    if len(data) > _AI_MAX_BYTES:
-        raise HTTPException(status_code=413, detail=f"{label} hajmi juda katta.")
-    ok = data[:3] == b"\xff\xd8\xff" if kind == "jpeg" else data[:8] == b"\x89PNG\r\n\x1a\n"
-    if not ok:
-        raise HTTPException(status_code=400, detail=f"{label} formati noto'g'ri.")
-    return data
-
-
-def _ai_status_out(st: dict) -> schemas.AiStatusOut:
-    return schemas.AiStatusOut(
-        available=st["available"], reason=st["reason"], title=st["title"], message=st["message"],
-        retry_after_seconds=st["retry_after_seconds"], remaining=st["remaining"],
-        per_user_limit=st["per_user_limit"],
-    )
-
-
-@router.get("/constructor/ai-status", response_model=schemas.AiStatusOut)
-def constructor_ai_status(
-    db: Session = Depends(get_db),
-    customer: models.Customer = Depends(security.get_current_customer),
-):
-    """AI ko'rish hozir mavjudmi? Mavjud bo'lmasa -- sababi va chiroyli tushuntirish."""
-    return _ai_status_out(ai_service.evaluate(db, customer))
-
-
-@router.post("/constructor/ai-preview")
-def constructor_ai_preview(
-    request: Request,
-    room: UploadFile = File(...),
-    guide: UploadFile = File(...),
-    artwork: Optional[UploadFile] = File(None),
-    glass_w_cm: float = Form(...),
-    glass_h_cm: float = Form(...),
-    pane_count: int = Form(1),
-    light: int = Form(100),
-    room_w: int = Form(4),
-    room_h: int = Form(3),
-    db: Session = Depends(get_db),
-    customer: models.Customer = Depends(security.get_current_customer),
-):
-    security.enforce_rate_limit(request, "ai_preview", max_calls=8, window_seconds=600)
-
-    if not customer.is_staff and _active_constructor_usage(db, customer.id) is None:
-        raise HTTPException(status_code=403, detail="Avval konstruktorda rasm yuklab, dizaynni boshlang.")
-    if not (5 <= glass_w_cm <= 2000 and 5 <= glass_h_cm <= 2000) or not (1 <= pane_count <= 12):
-        raise HTTPException(status_code=400, detail="O'lchamlar noto'g'ri.")
-
-    room_b = _read_ai_image(room, "jpeg", "Xona rasmi")
-    guide_b = _read_ai_image(guide, "jpeg", "Joylashtirilgan ko'rinish")
-    art_b = _read_ai_image(artwork, "png", "Dizayn rasmi") if artwork is not None else None
-
-    # Limitni TEKSHIRIB, joyni band qilamiz (tugagan bo'lsa -- chiroyli tushuntirish bilan 429).
-    try:
-        usage = ai_service.reserve(db, customer)
-    except ai_service.AiLimitReached as lim:
-        title, msg = ai_service.message_for(lim.reason, lim.retry_after_seconds, ai_service.get_config(db).per_user_limit)
-        raise HTTPException(
-            status_code=429,
-            detail={"code": lim.reason, "title": title, "message": msg, "retry_after_seconds": lim.retry_after_seconds},
-        )
-
-    hint = "dim, low-light room" if light < 70 else ("slightly dim room" if light < 88 else "")
-    prompt = ai_gemini.build_prompt(
-        glass_w_cm=glass_w_cm, glass_h_cm=glass_h_cm, pane_count=pane_count,
-        has_artwork_image=art_b is not None, room_light_hint=hint,
-    )
-    started = time.monotonic()
-
-    def fail(status_code: int, code: str, title: str, message: str, usage_status: str, headers=None):
-        ai_service.finish(db, usage, usage_status, (time.monotonic() - started) * 1000, code)
-        raise HTTPException(
-            status_code=status_code,
-            detail={"code": code, "title": title, "message": message},
-            headers=headers,
-        )
-
-    try:
-        ratio = ai_gemini.nearest_aspect_ratio(max(1, room_w), max(1, room_h))
-        result = ai_gemini.generate_room_preview(
-            room_jpeg=room_b, guide_jpeg=guide_b, artwork_png=art_b, prompt=prompt, aspect_ratio=ratio,
-        )
-    except ai_gemini.AiQuotaError as e:
-        ai_service.block_provider(db, e.retry_after_seconds)
-        st = ai_service.evaluate(db, customer)
-        title, msg = ai_service.message_for("provider_quota", st["retry_after_seconds"])
-        fail(429, "provider_quota", title, msg, "quota")
-    except ai_gemini.AiBlockedError:
-        fail(422, "blocked", "AI bu rasm bilan ishlay olmadi",
-             "Rasm tahlil qilinmadi. Devor aniq ko'ringan, yaxshi yoritilgan boshqa rasm bilan urinib ko'ring. "
-             "Bu urinish limitingizdan hisoblanmadi.", "blocked")
-    except ai_gemini.AiConfigError:
-        # Kalit/model xatosi -- admin uchun logda, foydalanuvchiga "mavjud emas" deymiz.
-        ai_gemini.logger.error("Gemini sozlamasi xato (kalit/model). .env va Render Environment'ni tekshiring.")
-        title, msg = ai_service.message_for("not_configured")
-        fail(503, "not_configured", title, msg, "error")
-    except ai_gemini.AiError:
-        fail(502, "unavailable", "AI hozir javob bermadi",
-             "Xizmat vaqtincha band yoki sekin ishladi. Birozdan so'ng qayta urinib ko'ring. "
-             "Bu urinish limitingizdan hisoblanmadi.", "error")
-
-    ai_service.finish(db, usage, "ok", (time.monotonic() - started) * 1000)
-    mime = result.mime if result.mime in ("image/png", "image/jpeg", "image/webp") else "image/png"
-    after = ai_service.evaluate(db, customer)
-    return {
-        "image": f"data:{mime};base64,{base64.b64encode(result.data).decode('ascii')}",
-        "remaining": after["remaining"],
-    }
 
 
 # ---------- Honeypot: real-vaqt heartbeat + avtomatik yangilanish ----------
