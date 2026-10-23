@@ -252,33 +252,6 @@
         <div class="constructor-error" id="constructorError"></div>
         <div class="constructor-limit" id="constructorLimit" hidden></div>
 
-        <div class="ce" id="constructorEditor" hidden>
-          <h3 class="constructor-step">3. Rasmni tahrirlang</h3>
-          <div class="ce-quality" id="ceQuality"></div>
-          <div class="ce-tools">
-            <button type="button" class="ce-tool primary" id="ceCropBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>Kesish</button>
-            <button type="button" class="ce-tool" id="ceRotL"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Chapga 90°</button>
-            <button type="button" class="ce-tool" id="ceRotR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>O'ngga 90°</button>
-            <button type="button" class="ce-tool" id="ceFlip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7 3 12l5 5V7z"/><path d="m16 7 5 5-5 5V7z"/></svg>Ko'zgu</button>
-            <button type="button" class="ce-tool" id="ceCenter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>Markazlash</button>
-            <button type="button" class="ce-tool" id="ceReset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg>Asliga qaytarish</button>
-          </div>
-          <div class="ce-seg" id="ceFit" role="group" aria-label="Joylashtirish usuli">
-            <button type="button" data-fit="cover" class="active">Ramkani to'ldirish</button>
-            <button type="button" data-fit="contain">Butunlay sig'dirish</button>
-          </div>
-          <div class="ce-row"><label for="ceZoom">Masshtab <output id="ceZoomOut">100%</output></label><input type="range" id="ceZoom" min="100" max="400" value="100" /></div>
-          <div class="ce-row"><label for="ceBright">Yorqinlik <output id="ceBrightOut">0</output></label><input type="range" id="ceBright" min="40" max="170" value="100" /></div>
-          <div class="ce-row"><label for="ceContrast">Kontrast <output id="ceContrastOut">0</output></label><input type="range" id="ceContrast" min="50" max="160" value="100" /></div>
-          <div class="ce-row"><label for="ceSat">To'yinganlik <output id="ceSatOut">0</output></label><input type="range" id="ceSat" min="0" max="220" value="100" /></div>
-          <div class="ce-chips" id="ceChips">
-            <button type="button" class="ce-chip active" data-fx="none">Asl rang</button>
-            <button type="button" class="ce-chip" data-fx="gray">Qora-oq</button>
-            <button type="button" class="ce-chip" data-fx="sepia">Sepiya</button>
-            <button type="button" class="ce-chip" data-fx="vivid">Jonli</button>
-          </div>
-          <p class="ce-hint">Rasmni panel ichida surish uchun ko'rinish oynasidagi «Siljitish» tugmasini yoqing, so'ng sichqoncha yoki barmoq bilan suring; g'ildirak, ikki barmoq yoki Masshtab slayderi bilan kattalashtiring. Eng oxirgi ko'rinish aynan yuklab olinadi va Telegramga yuboriladi.</p>
-        </div>
       </div>
 
       <div class="constructor-panel">
@@ -317,12 +290,65 @@
                 <button type="button" class="cv3-icon-btn" id="cvResetView" aria-label="Ko'rinishni tiklash" title="Ko'rinishni tiklash (ikki marta bosish)">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
                 </button>
+                <button type="button" class="cv3-icon-btn" id="cvToolsBtn" aria-label="Rasm tahrirlash asboblari" aria-pressed="false" title="Asboblar — rasmni tahrirlash" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+                </button>
               </div>
             </div>
 
             <div class="cv3-temp" id="cvTemp" aria-live="polite">
               <div class="cv3-temp-row"><span>Pech harorati</span><b id="cvTempVal">22°C</b></div>
               <div class="cv3-temp-bar"><i id="cvTempBar"></i></div>
+            </div>
+
+
+            <!-- Photoshop uslubidagi rasm tahrirlash paneli: asboblar tugmasi (cvToolsBtn) orqali ochiladi -->
+            <div class="ps" id="constructorEditor" hidden role="dialog" aria-label="Rasm tahrirlash asboblari">
+              <div class="ps-head">
+                <span class="ps-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg> Asboblar</span>
+                <span class="ps-head-btns">
+                  <button type="button" class="ps-hbtn" id="psMin" aria-label="Kichraytirish" title="Kichraytirish / kattalashtirish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+                  <button type="button" class="ps-hbtn" id="psClose" aria-label="Yopish" title="Yopish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+                </span>
+              </div>
+              <div class="ps-body">
+                <div class="ps-rail" role="toolbar" aria-label="Asboblar">
+                  <button type="button" class="ce-tool" id="psMove" title="Siljitish asbobi — rasmni panel ichida suring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>Surish</button>
+                  <button type="button" class="ce-tool" id="ceCropBtn" title="Kesish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>Kesish</button>
+                  <button type="button" class="ce-tool" id="ceRotL" title="Chapga 90°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Chapga</button>
+                  <button type="button" class="ce-tool" id="ceRotR" title="O'ngga 90°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>O'ngga</button>
+                  <button type="button" class="ce-tool" id="ceFlip" title="Ko'zgu (gorizontal aylantirish)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7 3 12l5 5V7z"/><path d="m16 7 5 5-5 5V7z"/></svg>Ko'zgu</button>
+                  <button type="button" class="ce-tool" id="ceCenter" title="Rasmni markazlash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>Markaz</button>
+                  <button type="button" class="ce-tool" id="ceReset" title="Asliga qaytarish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg>Asl</button>
+                </div>
+                <div class="ps-props">
+                  <div class="ce-quality" id="ceQuality"></div>
+                  <details class="ps-sec" open>
+                    <summary>Joylashtirish</summary>
+                    <div class="ce-seg" id="ceFit" role="group" aria-label="Joylashtirish usuli">
+                      <button type="button" data-fit="cover" class="active">To'ldirish</button>
+                      <button type="button" data-fit="contain">Sig'dirish</button>
+                    </div>
+                    <div class="ce-row"><label for="ceZoom">Masshtab <output id="ceZoomOut">100%</output></label><input type="range" id="ceZoom" min="100" max="400" value="100" /></div>
+                  </details>
+                  <details class="ps-sec" open>
+                    <summary>Sozlamalar</summary>
+                    <div class="ce-row"><label for="ceBright">Yorqinlik <output id="ceBrightOut">0</output></label><input type="range" id="ceBright" min="40" max="170" value="100" /></div>
+                    <div class="ce-row"><label for="ceContrast">Kontrast <output id="ceContrastOut">0</output></label><input type="range" id="ceContrast" min="50" max="160" value="100" /></div>
+                    <div class="ce-row"><label for="ceSat">To'yinganlik <output id="ceSatOut">0</output></label><input type="range" id="ceSat" min="0" max="220" value="100" /></div>
+                  </details>
+                  <details class="ps-sec" open>
+                    <summary>Filtrlar</summary>
+                    <div class="ce-chips" id="ceChips">
+                      <button type="button" class="ce-chip active" data-fx="none">Asl rang</button>
+                      <button type="button" class="ce-chip" data-fx="gray">Qora-oq</button>
+                      <button type="button" class="ce-chip" data-fx="sepia">Sepiya</button>
+                      <button type="button" class="ce-chip" data-fx="vivid">Jonli</button>
+                    </div>
+                  </details>
+                  <p class="ce-hint">Rasmni surish uchun «Surish» asbobini yoqing, so'ng sichqoncha yoki barmoq bilan suring; g'ildirak yoki ikki barmoq bilan kattalashtiring. Oxirgi ko'rinish aynan yuklab olinadi va Telegramga yuboriladi.</p>
+                </div>
+              </div>
             </div>
 
             <div class="cv3-placeholder" id="constructorPreviewPlaceholder">
@@ -342,7 +368,7 @@
         <div class="cv3-actions" id="cvActions">
           <button type="button" class="cv3-btn cv3-btn-split" id="cvExplodeBtn" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 8 4-8 4-8-4 8-4z"/><path d="m4 12 8 4 8-4"/><path d="m4 17 8 4 8-4"/></svg>
-            <span><span id="cvExplodeText">Qatlamni ajratish</span><small>4 ta qatlamni ko'rish</small></span>
+            <span><span id="cvExplodeText">Qatlamni ajratish</span><small>3 ta qatlamni ko'rish</small></span>
           </button>
           <button type="button" class="cv3-btn cv3-btn-heat" id="cvHeatBtn" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3.5 5 5.2 5 10a5 5 0 0 1-10 0c0-2 1-3.4 2-4.6.4 1.4 1 2 2 2.6C11 8.5 10.8 5.8 12 3z"/></svg>
@@ -351,7 +377,7 @@
         </div>
         <div class="cv3-status" id="cvStatus">
           <div class="cv3-status-ico" id="cvStatusIco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 8 4-8 4-8-4 8-4z"/><path d="m4 12 8 4 8-4"/></svg></div>
-          <div><strong id="cvStatusTitle">Yig'ilgan holat</strong><span id="cvStatusDesc">Oynani sichqoncha yoki barmoq bilan aylantirib ko'ring: bosma rasm, PVB plyonka va himoya oynasi.</span></div>
+          <div><strong id="cvStatusTitle">Yig'ilgan holat</strong><span id="cvStatusDesc">Oynani sichqoncha yoki barmoq bilan 360° aylantirib ko'ring: rasm, PVB kley va oyna.</span></div>
         </div>
         <div class="constructor-actions-row" style="display:flex; gap:8px; margin-top:12px;">
           <button type="button" class="btn btn-ghost" id="constructorDownloadBtn" style="flex:1;" disabled>
@@ -1011,7 +1037,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     const ready = readyNow();
     ['constructorShareBtn','constructorDownloadBtn','constructorArBtn'].forEach(id => { const n = $(id); if(n) n.disabled = !ready; });
     $('constructorZoomBtn').hidden = !ready;
-    $('constructorEditor').hidden = !ready;
+    $('cvToolsBtn').disabled = !ready;
+    if(!ready) setToolsOpen(false);
     $('cvModeMove').disabled = !ready;
     $('constructorPreviewPlaceholder').hidden = ready;
 
@@ -1072,13 +1099,13 @@ document.addEventListener("DOMContentLoaded",()=>{
       else { title = 'Pech qizdirilmoqda'; desc = "Qatlamlar pechga qo'yildi, harorat 140°C ga ko'tarilmoqda."; }
     } else if(s.cured){
       cls = 'is-ok'; title = 'Laminatsiya tayyor';
-      desc = "Qatlamlar yaxlit birikdi: rasm himoya oynasi ostida tiniq, namlik va chizilishdan himoyalangan.";
+      desc = "Qatlamlar yaxlit birikdi: rasm oyna ostida tiniq va yorqin, namlik va chizilishdan himoyalangan.";
     } else if(s.exploded){
       title = 'Qatlamlar ajratilgan';
-      desc = "Oq taglik, bosma rasm, PVB plyonka va himoya oynasi — buyurtmada shunday yig'iladi.";
+      desc = "Rasm (orqasi oq), PVB kley va oyna — buyurtmada shunday yig'iladi.";
     } else {
       title = "Yig'ilgan holat";
-      desc = "Oynani sichqoncha yoki barmoq bilan aylantirib ko'ring. Pastdagi tugmalar bilan qatlamlarni ajrating yoki pechda qizdirib ko'ring.";
+      desc = "Oynani sichqoncha yoki barmoq bilan 360° aylantirib ko'ring. Pastdagi tugmalar bilan qatlamlarni ajrating yoki pechda qizdirib ko'ring.";
     }
     $('cvStatus').className = 'cv3-status ' + cls;
     $('cvStatusTitle').textContent = title;
@@ -1515,7 +1542,30 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   function setModeUi(m){
     document.querySelectorAll('#cvMode button').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+    const pm = $('psMove'); if(pm) pm.classList.toggle('active', m === 'move');
   }
+  $('psMove').addEventListener('click', () => {
+    if(!stage3d || !readyNow()) return;
+    const next = stage3d.getMode() === 'move' ? 'rotate' : 'move';
+    stage3d.setMode(next); setModeUi(next);
+  });
+
+  /* ---- Photoshop uslubidagi asboblar paneli (preview ichida) ---- */
+  function setToolsOpen(open){
+    const ed = $('constructorEditor'), btn = $('cvToolsBtn');
+    open = !!open && readyNow();
+    ed.hidden = !open;
+    if(open) ed.classList.remove('min');
+    btn.classList.toggle('active', open);
+    btn.setAttribute('aria-pressed', open ? 'true' : 'false');
+  }
+  $('cvToolsBtn').addEventListener('click', () => {
+    const ed = $('constructorEditor');
+    if(!ed.hidden && ed.classList.contains('min')){ ed.classList.remove('min'); return; }
+    setToolsOpen(ed.hidden);
+  });
+  $('psClose').addEventListener('click', () => setToolsOpen(false));
+  $('psMin').addEventListener('click', () => $('constructorEditor').classList.toggle('min'));
   $('cvMode').addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if(!b || b.disabled || !stage3d) return;
@@ -1636,18 +1686,6 @@ document.addEventListener("DOMContentLoaded",()=>{
     await setWork(c);
   });
 
-
-  /* Telefonda tahrirlash vositalari ko'rinish (preview) ostida turadi — slayderni
-     surganda natija bir ekranda ko'rinib turishi uchun. */
-  const mqMobile = window.matchMedia('(max-width: 860px)');
-  function placeEditor(){
-    const ed = $('constructorEditor');
-    const host = mqMobile.matches ? $('constructorShareError').parentNode : document.querySelector('.constructor-panel');
-    if(mqMobile.matches){ if(ed.parentNode !== host) host.appendChild(ed); }
-    else { const left = document.querySelector('.constructor-grid .constructor-panel'); if(ed.parentNode !== left) left.appendChild(ed); }
-  }
-  mqMobile.addEventListener('change', placeEditor);
-  placeEditor();
 
   async function loadSizes(){
     try{

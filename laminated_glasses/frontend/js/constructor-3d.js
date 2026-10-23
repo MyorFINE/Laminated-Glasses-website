@@ -4,7 +4,9 @@
    rasmni haqiqiy 3D shisha panellar ko'rinishida chizadi:
      - har bir panelning eni/bo'yi admin belgilagan o'lchamdan (sm) olinadi
        va sahnada AYNAN shu nisbatda quriladi (foydalanuvchi o'zgartira olmaydi);
-     - 4 qatlam: oq taglik, bosma rasm, PVB plyonka, himoya oynasi;
+     - 3 qatlam (orqadan oldinga): rasm (orqasi oq), PVB kley, oyna (1,5 mm);
+     - 360° erkin aylantirish (sichqoncha/barmoq, inersiya bilan);
+     - qizdirishdan oldin rasm PVB ortida xira (blur), qizdirilgach tiniq va yorqin;
      - "Qatlamlarni ajratish" — qatlamlar bir-biridan ajraladi;
      - "Qizdirish" — pechda PVB erib, qatlamlar biriksishi simulyatsiyasi.
 
@@ -24,17 +26,18 @@
   function easeInOut(t) { t = clamp(t, 0, 1); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
   function round1(n) { return Math.round(n * 10) / 10; }
 
-  /* Qatlam qalinliklari (sm) — tasvir uchun haqiqiydan biroz yo'g'onroq.
-     Tartib (orqadan oldinga): 0 taglik, 1 bosma, 2 PVB, 3 oyna. */
-  var THICK = [0.4, 0.05, 0.2, 0.5];
+  /* Qatlam qalinliklari (sm). Oyna 1,5 mm; qog'oz (rasm) + PVB kley birgalikda 2 mm gacha.
+     Tartib (orqadan oldinga): 0 rasm (orqasi oq), 1 PVB kley, 2 oyna. */
+  var THICK = [0.05, 0.15, 0.15];
   var BASE_Z = [];
   (function () {
     var total = THICK.reduce(function (a, b) { return a + b; }, 0);
     var z = -total / 2;
     for (var i = 0; i < THICK.length; i++) { BASE_Z[i] = z + THICK[i] / 2; z += THICK[i]; }
   })();
-  var LOOSE_GAP = 0.16;     // qizdirishdan oldin qatlamlar orasidagi mayda tirqish
-  var LAYER_NAMES = ['Oq taglik', 'Rasm (bosma)', 'PVB plyonka', 'Himoya oynasi'];
+  var LOOSE_GAP = 0.07;     // qizdirishdan oldin qatlamlar orasidagi mayda tirqish
+  var LAYER_NAMES = ['Rasm (orqasi oq)', 'PVB kley', 'Oyna'];
+  var TAU = Math.PI * 2;
   var HEAT_MS = 6200;
 
   function hasWebGL() {
@@ -63,8 +66,8 @@
     scene.add(root);
 
     /* ---------- Yorug'lik va aks-sado muhiti ---------- */
-    scene.add(new T.HemisphereLight(0xffffff, 0x9fb4c6, 0.9));
-    var key = new T.DirectionalLight(0xffffff, 0.9);
+    scene.add(new T.HemisphereLight(0xffffff, 0x9fb4c6, 0.55));
+    var key = new T.DirectionalLight(0xffffff, 0.5);
     key.position.set(-120, 160, 220);
     scene.add(key);
 
@@ -74,10 +77,10 @@
         var c = document.createElement('canvas'); c.width = 512; c.height = 256;
         var g = c.getContext('2d');
         var gr = g.createLinearGradient(0, 0, 0, 256);
-        gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.42, '#d6e7f4');
-        gr.addColorStop(0.5, '#93a8b9'); gr.addColorStop(1, '#2b3a47');
+        gr.addColorStop(0, '#dfe8ee'); gr.addColorStop(0.42, '#b4c4d1');
+        gr.addColorStop(0.5, '#7d8f9d'); gr.addColorStop(1, '#27333d');
         g.fillStyle = gr; g.fillRect(0, 0, 512, 256);
-        g.fillStyle = 'rgba(255,255,255,0.96)';
+        g.fillStyle = 'rgba(255,255,255,0.6)';
         g.fillRect(70, 46, 96, 64); g.fillRect(330, 38, 120, 56); g.fillRect(210, 14, 70, 26);
         var tex = new T.CanvasTexture(c);
         tex.mapping = T.EquirectangularReflectionMapping;
@@ -89,24 +92,26 @@
     })();
 
     /* ---------- Umumiy materiallar ---------- */
-    var white = new T.MeshStandardMaterial({ color: 0xf7f9fb, roughness: 0.9, metalness: 0 });
-    var printMat = new T.MeshBasicMaterial({ color: 0xffffff });
+    var white = new T.MeshStandardMaterial({ color: 0xf1f3f5, roughness: 0.92, metalness: 0 });
+    // Rasm: avval xira (blur) nusxa, qizdirilganda ustidagi tiniq nusxa ko'rinib boradi
+    var printBlurMat = new T.MeshBasicMaterial({ color: 0xcccccc });
+    var printSharpMat = new T.MeshBasicMaterial({ color: 0xcccccc, transparent: true, opacity: 0, depthWrite: false });
     var pvbMat = new T.MeshPhysicalMaterial({
-      color: 0xffffff, roughness: 0.7, metalness: 0, transparent: true, opacity: 0.5,
-      depthWrite: false, envMap: envTex, envMapIntensity: 0.6
+      color: 0xf0f3f6, roughness: 0.8, metalness: 0, transparent: true, opacity: 0.42,
+      depthWrite: false, envMap: envTex, envMapIntensity: 0.25
     });
     var glassFaceMat = new T.MeshPhysicalMaterial({
-      color: 0xeaf7f5, roughness: 0.03, metalness: 0, transparent: true, opacity: 0.16,
-      depthWrite: false, envMap: envTex, envMapIntensity: 1.4, clearcoat: 1, clearcoatRoughness: 0.02
+      color: 0xe3f1ef, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.07,
+      depthWrite: false, envMap: envTex, envMapIntensity: 0.7, clearcoat: 0.6, clearcoatRoughness: 0.05
     });
     var glassEdgeMat = new T.MeshPhysicalMaterial({
-      color: 0x8fd3c8, roughness: 0.15, metalness: 0, transparent: true, opacity: 0.6,
-      depthWrite: false, envMap: envTex, envMapIntensity: 1
+      color: 0x7fbfb4, roughness: 0.2, metalness: 0, transparent: true, opacity: 0.7,
+      depthWrite: false, envMap: envTex, envMapIntensity: 0.7
     });
     var glowMat = new T.MeshBasicMaterial({
       color: 0xff5a14, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false
     });
-    var edgeLineMat = new T.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+    var edgeLineMat = new T.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 });
 
     /* Oyna sirtidagi o'tkir akslanish (burchak o'zgarganda siljiydi) */
     var sheenTex;
@@ -121,20 +126,20 @@
         gr.addColorStop(1, 'rgba(255,255,255,0)');
         g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
       }
-      band(90, 46, 0.55); band(190, 16, 0.3);
+      band(90, 46, 0.35); band(190, 16, 0.2);
       sheenTex = new T.CanvasTexture(c);
       sheenTex.wrapS = sheenTex.wrapT = T.RepeatWrapping;
     })();
     var sheenMat = new T.MeshBasicMaterial({
-      map: sheenTex, transparent: true, opacity: 0.5, blending: T.AdditiveBlending, depthWrite: false
+      map: sheenTex, transparent: true, opacity: 0.2, blending: T.AdditiveBlending, depthWrite: false
     });
 
-    var printTex = null;
+    var printTex = null, blurTex = null, blurCanvas = null, srcCanvas = null;
     var shadowMesh = null, shadowTex = null;
 
     /* ---------- Holat ---------- */
     var panes = [];                 // [{w,h,index}]
-    var meshes = [];                // har bir panel uchun { g: [4 qatlam], ... }
+    var meshes = [];                // har bir panel uchun { layers: [3 qatlam], ... }
     var sumW = 0, maxH = 0, gap = 1.5, totalW = 0;
     var mode = 'rotate';
     var exploded = false, heating = false, cured = false;
@@ -216,25 +221,31 @@
         root.add(g);
 
         var layers = [];
-        // 0: taglik
-        layers.push(makeBox(p.w, p.h, THICK[0], white));
-        // 1: bosma (old tomoniga rasm teksturasi)
-        var pm = makeBox(p.w, p.h, THICK[1], [white, white, white, white, printMat, white]);
-        var uv = pm.geometry.attributes.uv;
-        for (var k = 16; k < 20; k++) {            // +z yoq
-          uv.setXY(k, lerp(u0, u1, uv.getX(k)), lerp(v0, v1, uv.getY(k)));
+        function sliceUV(geo, from, to) {
+          var uv = geo.attributes.uv;
+          for (var k = from; k < to; k++) uv.setXY(k, lerp(u0, u1, uv.getX(k)), lerp(v0, v1, uv.getY(k)));
+          uv.needsUpdate = true;
         }
-        uv.needsUpdate = true;
-        layers.push(pm);
-        // 2: PVB (biroz kichikroq)
-        layers.push(makeBox(Math.max(0.1, p.w - 0.3), Math.max(0.1, p.h - 0.3), THICK[2], pvbMat));
-        // 3: oyna + akslanish + qizish qatlami
+        // 0: rasm qatlami — old tomoni xira rasm, orqasi OQ; ustida tiniq nusxa (qizdirilganda ochiladi)
+        var printG = new T.Group();
+        var pm = makeBox(p.w, p.h, THICK[0], [white, white, white, white, printBlurMat, white]);
+        sliceUV(pm.geometry, 16, 20);                 // +z yoq
+        printG.add(pm);
+        var sharp = new T.Mesh(new T.PlaneGeometry(p.w, p.h), printSharpMat);
+        sharp.position.z = THICK[0] / 2 + 0.004;
+        sliceUV(sharp.geometry, 0, 4);
+        sharp.renderOrder = 1;
+        printG.add(sharp);
+        layers.push(printG);
+        // 1: PVB kley (biroz kichikroq)
+        layers.push(makeBox(Math.max(0.1, p.w - 0.2), Math.max(0.1, p.h - 0.2), THICK[1], pvbMat));
+        // 2: oyna + akslanish + qizish qatlami
         var glass = new T.Group();
-        var gm = makeBox(p.w, p.h, THICK[3], [glassEdgeMat, glassEdgeMat, glassEdgeMat, glassEdgeMat, glassFaceMat, glassFaceMat]);
+        var gm = makeBox(p.w, p.h, THICK[2], [glassEdgeMat, glassEdgeMat, glassEdgeMat, glassEdgeMat, glassFaceMat, glassFaceMat]);
         glass.add(gm);
         var edges = new T.LineSegments(new T.EdgesGeometry(gm.geometry), edgeLineMat);
         glass.add(edges);
-        var front = THICK[3] / 2;
+        var front = THICK[2] / 2;
         var sheen = new T.Mesh(new T.PlaneGeometry(p.w, p.h), sheenMat);
         sheen.position.z = front + 0.02;
         var suv = sheen.geometry.attributes.uv;
@@ -250,7 +261,7 @@
         layers.push(glass);
 
         layers.forEach(function (m) { g.add(m); });
-        glass.renderOrder = 4; layers[2].renderOrder = 3;
+        glass.renderOrder = 4; layers[1].renderOrder = 3;
         meshes.push({ group: g, layers: layers, x: cx, w: p.w, h: p.h });
 
         xCm += p.w;
@@ -355,22 +366,25 @@
       // Qatlamlar o'rni: bog'langan holat + (qizdirishgacha mayda tirqish) + (ajratish)
       var loose = LOOSE_GAP * (1 - cure);
       meshes.forEach(function (m) {
-        for (var i = 0; i < 4; i++) {
-          var z = BASE_Z[i] + (i - 1.5) * loose + (i - 1.5) * spread * ex;
+        for (var i = 0; i < 3; i++) {
+          var z = BASE_Z[i] + (i - 1) * loose + (i - 1) * spread * ex;
           m.layers[i].position.z = z;
         }
       });
-      // PVB: qizdirilganda erib, tiniq bo'ladi; qizish paytida to'q sariq tovlanadi
-      pvbMat.opacity = lerp(0.52, 0.05, cure);
-      pvbMat.roughness = lerp(0.7, 0.06, cure);
-      pvbMat.color.setRGB(1, 1 - 0.55 * glow, 1 - 0.9 * glow);
-      // Bosma rasm: qizdirilgach yorqinroq va tiniqroq ko'rinadi
-      var b = lerp(0.9, 1.0, cure);
-      printMat.color.setRGB(b, b * (1 - 0.22 * glow), b * (1 - 0.5 * glow));
-      glassFaceMat.opacity = lerp(0.15, 0.2, cure);
-      glassFaceMat.envMapIntensity = lerp(1.2, 2.0, cure);
-      glowMat.opacity = glow * 0.3;
-      sheenMat.opacity = lerp(0.42, 0.62, cure);
+      // PVB: qizdirishdan oldin sutdek xira; qizdirilganda erib butunlay tiniq bo'ladi
+      pvbMat.opacity = lerp(0.42, 0.03, cure);
+      pvbMat.roughness = lerp(0.8, 0.05, cure);
+      pvbMat.color.setRGB(0.94 + 0.06 * cure, (0.95 + 0.05 * cure) - 0.45 * glow, (0.96 + 0.04 * cure) - 0.8 * glow);
+      // Rasm: oldin biroz xira va xiralashgan, qizdirilgach tiniq va yorqin
+      var b = lerp(0.78, 1.0, cure);
+      var rr = b, gg = b * (1 - 0.18 * glow), bb = b * (1 - 0.45 * glow);
+      printBlurMat.color.setRGB(rr, gg, bb);
+      printSharpMat.color.setRGB(rr, gg, bb);
+      printSharpMat.opacity = clamp(cure, 0, 1);
+      glassFaceMat.opacity = lerp(0.06, 0.1, cure);
+      glassFaceMat.envMapIntensity = lerp(0.6, 1.0, cure);
+      glowMat.opacity = glow * 0.25;
+      sheenMat.opacity = lerp(0.16, 0.3, cure);
       if (shadowMesh) shadowMesh.material.opacity = 1 - 0.85 * ex;
       dirty = true;
     }
@@ -384,7 +398,7 @@
       var from = ex, to = flag ? 1 : 0;
       if (flag) {
         camSaved = { yaw: camTgt.yaw, pitch: camTgt.pitch, zoom: camTgt.zoom };
-        if (mode === 'rotate') { camTgt.yaw = -34 * DEG; camTgt.pitch = 13 * DEG; camTgt.zoom = 1.12; }
+        if (mode === 'rotate') { camTgt.yaw = frontYaw() - 34 * DEG; camTgt.pitch = 13 * DEG; camTgt.zoom = 1.12; }
       } else if (camSaved) {
         camTgt.yaw = camSaved.yaw; camTgt.pitch = camSaved.pitch; camTgt.zoom = camSaved.zoom; camSaved = null;
       }
@@ -413,10 +427,13 @@
     function resetHeat() {
       if (heating || !cured) return;
       var from = cure;
+      updateBlur();
       tween(700, function (p) { cure = lerp(from, 0, easeInOut(p)); applyVisuals(); }, function () {
         cured = false; cure = 0; temp = 22; applyVisuals(); emit();
       });
     }
+
+    function frontYaw() { return Math.round(cam.yaw / TAU) * TAU; }
 
     function setMode(m) {
       m = m === 'move' ? 'move' : 'rotate';
@@ -425,37 +442,81 @@
       canvas.classList.toggle('mode-move', m === 'move');
       if (m === 'move') {
         if (exploded) setExploded(false);
-        camTgt.yaw = 0; camTgt.pitch = 0; camTgt.zoom = 1;       // rasmni siljitish uchun to'g'ri ro'para
+        camTgt.yaw = frontYaw(); camTgt.pitch = 0; camTgt.zoom = 1; spin.yaw = spin.pitch = 0;   // rasmni siljitish uchun to'g'ri ro'para
       }
       dirty = true;
     }
 
-    function resetCamera() { camTgt.yaw = 0; camTgt.pitch = 0; camTgt.zoom = exploded ? 1.12 : 1; if (exploded) { camTgt.yaw = -34 * DEG; camTgt.pitch = 13 * DEG; } dirty = true; }
+    function resetCamera() {
+      var fy = frontYaw();
+      spin.yaw = spin.pitch = 0;
+      camTgt.yaw = fy; camTgt.pitch = 0; camTgt.zoom = exploded ? 1.12 : 1;
+      if (exploded) { camTgt.yaw = fy - 34 * DEG; camTgt.pitch = 13 * DEG; }
+      dirty = true;
+    }
     function zoomBy(f) { camTgt.zoom = clamp(camTgt.zoom * f, 0.38, 1.8); dirty = true; }
 
     /* Ro'para tekislikda 1 sm ekrandagi necha piksel (rasmni siljitish uchun) */
     function pxPerCm() {
       placeCamera();
-      var zf = BASE_Z[3] + THICK[3] / 2;
+      var zf = BASE_Z[2] + THICK[2] / 2;
       var a = new T.Vector3(0, 0, zf).project(camera), b = new T.Vector3(10, 0, zf).project(camera);
       var w = renderer.domElement.clientWidth || wrap.clientWidth;
       return Math.max(0.001, Math.abs(b.x - a.x) * w / 2 / 10);
     }
 
     /* ---------- Rasm teksturasi ---------- */
+    var canFilter = (function () { try { return 'filter' in CanvasRenderingContext2D.prototype; } catch (e) { return false; } })();
+    function updateBlur() {
+      if (!srcCanvas) return;
+      var m = 420, sc = Math.min(1, m / Math.max(srcCanvas.width, srcCanvas.height));
+      var w = Math.max(8, Math.round(srcCanvas.width * sc)), h = Math.max(8, Math.round(srcCanvas.height * sc));
+      if (!blurCanvas || blurCanvas.width !== w || blurCanvas.height !== h) {
+        blurCanvas = document.createElement('canvas'); blurCanvas.width = w; blurCanvas.height = h;
+        if (blurTex) blurTex.dispose();
+        blurTex = null;
+      }
+      var g = blurCanvas.getContext('2d');
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+      g.clearRect(0, 0, w, h);
+      if (canFilter) {
+        g.filter = 'blur(' + Math.max(1.5, w / 120).toFixed(1) + 'px)';
+        g.drawImage(srcCanvas, 0, 0, w, h);
+        g.filter = 'none';
+      } else {
+        // filter qo'llab-quvvatlanmasa: kichraytirib-kattalashtirish orqali xiralashtiramiz
+        var t = document.createElement('canvas'); t.width = Math.max(4, w >> 2); t.height = Math.max(4, h >> 2);
+        var tg = t.getContext('2d'); tg.imageSmoothingEnabled = true; tg.imageSmoothingQuality = 'high';
+        tg.drawImage(srcCanvas, 0, 0, t.width, t.height);
+        g.drawImage(t, 0, 0, w, h);
+      }
+      if (!blurTex) {
+        blurTex = new T.CanvasTexture(blurCanvas);
+        blurTex.encoding = T.sRGBEncoding;
+        blurTex.minFilter = T.LinearFilter; blurTex.generateMipmaps = false;
+        printBlurMat.map = blurTex; printBlurMat.needsUpdate = true;
+      } else blurTex.needsUpdate = true;
+    }
+
     function setPrintCanvas(c) {
       if (printTex) printTex.dispose();
-      printTex = null;
-      if (!c) { printMat.map = null; printMat.needsUpdate = true; return; }
+      printTex = null; srcCanvas = c || null;
+      if (!c) { printSharpMat.map = null; printBlurMat.map = null; printSharpMat.needsUpdate = true; printBlurMat.needsUpdate = true; return; }
       printTex = new T.CanvasTexture(c);
       printTex.encoding = T.sRGBEncoding;
       printTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
       printTex.generateMipmaps = true;
       printTex.minFilter = T.LinearMipmapLinearFilter;
-      printMat.map = printTex; printMat.needsUpdate = true;
+      printSharpMat.map = printTex; printSharpMat.needsUpdate = true;
+      updateBlur();
       dirty = true;
     }
-    function refreshPrint() { if (printTex) { printTex.needsUpdate = true; dirty = true; } }
+    function refreshPrint() {
+      if (!printTex) return;
+      printTex.needsUpdate = true;
+      if (cure < 0.999 || !cured) updateBlur();
+      dirty = true;
+    }
 
     /* ---------- Teglar (HTML) ---------- */
     var tmpV = new T.Vector3();
@@ -466,8 +527,9 @@
     }
     function updateLabels() {
       if (!labelsEl || !meshes.length) return;
-      var zf = BASE_Z[3] + THICK[3] / 2 + 0.1;
-      var showPane = ex < 0.15 && mode !== 'move';
+      var zf = BASE_Z[2] + THICK[2] / 2 + 0.1;
+      var facing = Math.cos(cam.yaw) * Math.cos(cam.pitch) > 0.25;     // orqa tomondan qaralganda teglar yashiriladi
+      var showPane = ex < 0.15 && mode !== 'move' && facing;
       meshes.forEach(function (m, i) {
         var chip = paneChips[i]; if (!chip) return;
         var l = project(m.x - m.w / 2, -m.h / 2, zf), r = project(m.x + m.w / 2, -m.h / 2, zf);
@@ -478,7 +540,7 @@
       });
       var fm = meshes[focusIdx];
       layerChips.forEach(function (chip, i) {
-        if (!fm || ex < 0.6) { chip.style.opacity = '0'; return; }
+        if (!fm || ex < 0.6 || !facing) { chip.style.opacity = '0'; return; }
         var z = fm.layers[i].position.z;
         var p = project(fm.x + fm.w / 2, fm.h / 2, z);
         chip.style.opacity = String(clamp((ex - 0.6) / 0.4, 0, 1));
@@ -488,12 +550,15 @@
 
     /* ---------- Sichqoncha / barmoq ---------- */
     var pts = new Map(), drag = null, pinch = null;
+    var spin = { yaw: 0, pitch: 0 };          // sudrashdan keyingi inersiya (rad/s)
+    var PITCH_MAX = 88 * DEG;
     canvas.addEventListener('pointerdown', function (e) {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* e'tiborsiz */ }
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pts.size === 1) {
-        drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false };
+        spin.yaw = spin.pitch = 0;
+        drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, t: performance.now() };
         if (mode === 'move' && opts.onImageDrag) opts.onImageDrag({ phase: 'start', dx: 0, dy: 0 });
       } else if (pts.size === 2) {
         var v = Array.from(pts.values());
@@ -525,9 +590,14 @@
         if (opts.onImageDrag) opts.onImageDrag({ phase: 'move', dx: dx, dy: dy });
       } else {
         var ddx = e.clientX - drag.x, ddy = e.clientY - drag.y;
-        drag.x = e.clientX; drag.y = e.clientY;
-        camTgt.yaw = clamp(camTgt.yaw + ddx * 0.4 * DEG, -80 * DEG, 80 * DEG);
-        camTgt.pitch = clamp(camTgt.pitch + ddy * 0.28 * DEG, -32 * DEG, 38 * DEG);
+        var now = performance.now(), dts = Math.max(0.008, (now - drag.t) / 1000);
+        drag.x = e.clientX; drag.y = e.clientY; drag.t = now;
+        var dyaw = ddx * 0.5 * DEG, dpitch = ddy * 0.4 * DEG;
+        // 360°: yaw cheklanmagan, pitch deyarli to'liq (tepa/past)
+        camTgt.yaw += dyaw;
+        camTgt.pitch = clamp(camTgt.pitch + dpitch, -PITCH_MAX, PITCH_MAX);
+        spin.yaw = lerp(spin.yaw, dyaw / dts, 0.5);
+        spin.pitch = lerp(spin.pitch, dpitch / dts, 0.5);
         dirty = true;
       }
     });
@@ -538,6 +608,7 @@
       if (pts.size === 0) {
         var wasTap = drag && !drag.moved && e.type === 'pointerup';
         if (mode === 'move' && drag && opts.onImageDrag) opts.onImageDrag({ phase: 'end', dx: 0, dy: 0 });
+        if (mode === 'rotate' && drag && drag.moved && performance.now() - drag.t > 90) { spin.yaw = spin.pitch = 0; }
         drag = null;
         canvas.classList.remove('dragging');
         if (wasTap && opts.onTap) opts.onTap();
@@ -561,6 +632,11 @@
       if (disposed) return;
       var dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
       stepTweens(now);
+      if (!drag && mode === 'rotate' && (Math.abs(spin.yaw) > 0.02 || Math.abs(spin.pitch) > 0.02)) {
+        camTgt.yaw += spin.yaw * dt;
+        camTgt.pitch = clamp(camTgt.pitch + spin.pitch * dt, -PITCH_MAX, PITCH_MAX);
+        var fr = Math.exp(-dt * 3.2); spin.yaw *= fr; spin.pitch *= fr; dirty = true;
+      }
       var k = 1 - Math.exp(-dt * 9);
       var dy = camTgt.yaw - cam.yaw, dp = camTgt.pitch - cam.pitch, dz = camTgt.zoom - cam.zoom;
       if (Math.abs(dy) > 1e-4 || Math.abs(dp) > 1e-4 || Math.abs(dz) > 1e-4) {
