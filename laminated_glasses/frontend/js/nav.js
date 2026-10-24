@@ -8,7 +8,7 @@
   "use strict";
 
   var BP = 960;
-  var NAV_DELAY = 480;
+  var NAV_DELAY = 560;
   var doc = document;
   var $ = function (id) { return doc.getElementById(id); };
   var reduce = function () {
@@ -47,66 +47,150 @@
     return !(e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === "_blank");
   }
 
+  /* ---------- Suyuq tomchi: prujina fizikasi ----------
+     x/w — joy va kenglik (ikkalasi ham prujinada, shuning uchun tomchi biroz
+     o'tib ketib, orqaga qaytib o'rnashadi). Tezlikka qarab harakat yo'nalishida
+     cho'ziladi (hajm saqlanadi: kengayganda balandligi kamayadi), yon tomonga
+     egiladi, yaltiroq chiziq esa inertsiya bilan orqada qoladi. Bosilganda ezilib,
+     qo'yib yuborilganda qaytadi. */
+  function Drop(el) {
+    var s = { x: 0, w: 0, vx: 0, vw: 0, tx: 0, tw: 0, pr: 0, pv: 0, pt: 0 };
+    var raf = 0, last = 0, onFrame = null;
+    var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
+
+    function paint() {
+      var sp = s.vx;
+      var stretch = clamp(Math.abs(sp) / 2800, 0, 0.38) + clamp(Math.abs(s.vw) / 3200, 0, 0.12);
+      var sx = 1 + stretch * 0.85 + s.pr * 0.07;
+      var sy = 1 - stretch * 0.42 - s.pr * 0.1;
+      el.style.setProperty("--lx", s.x.toFixed(2) + "px");
+      el.style.setProperty("--lw", Math.max(0, s.w).toFixed(2) + "px");
+      el.style.setProperty("--sx", sx.toFixed(4));
+      el.style.setProperty("--sy", sy.toFixed(4));
+      el.style.setProperty("--sk", clamp(-sp / 260, -9, 9).toFixed(2) + "deg");
+      el.style.setProperty("--hl", clamp(-sp / 120, -10, 10).toFixed(2) + "px");
+      if (onFrame) onFrame(s);
+    }
+
+    function step(t) {
+      var dt = Math.min((t - last) / 1000, 1 / 30);
+      last = t;
+      if (dt <= 0) dt = 1 / 60;
+      s.vx += (190 * (s.tx - s.x) - 17 * s.vx) * dt;  s.x += s.vx * dt;
+      s.vw += (240 * (s.tw - s.w) - 22 * s.vw) * dt;  s.w += s.vw * dt;
+      s.pv += (420 * (s.pt - s.pr) - 26 * s.pv) * dt; s.pr += s.pv * dt;
+      var rest = Math.abs(s.tx - s.x) < 0.04 && Math.abs(s.vx) < 0.5 &&
+                 Math.abs(s.tw - s.w) < 0.04 && Math.abs(s.vw) < 0.5 &&
+                 Math.abs(s.pt - s.pr) < 0.002 && Math.abs(s.pv) < 0.05;
+      if (rest) { s.x = s.tx; s.w = s.tw; s.vx = s.vw = 0; s.pr = s.pt; s.pv = 0; raf = 0; paint(); return; }
+      paint();
+      raf = window.requestAnimationFrame(step);
+    }
+    function run() { if (!raf) { last = performance.now(); raf = window.requestAnimationFrame(step); } }
+
+    return {
+      onFrame: function (fn) { onFrame = fn; },
+      snap: function (x, w) {
+        s.x = s.tx = x; s.w = s.tw = w; s.vx = s.vw = 0; paint();
+      },
+      to: function (x, w) {
+        s.tx = x; s.tw = w;
+        if (reduce()) { this.snap(x, w); return; }
+        run();
+      },
+      press: function (on) {
+        s.pt = on ? 1 : 0;
+        if (reduce()) { s.pr = s.pt; paint(); return; }
+        run();
+      },
+      moving: function () { return !!raf; }
+    };
+  }
+
   /* ---------- Desktop kapsula ---------- */
   if (nav) {
     var items = [].slice.call(nav.querySelectorAll(".lg-nav-item"));
     var lens = nav.querySelector(".lg-lens");
     var label = $("lgLensLabel");
+    var drop = Drop(lens);
     var active = findActive(items);
-    var moveTimer;
+    var prev = active;
+    var coveredIdx = -2, labelIdx = -2;
 
-    var place = function (el) {
-      if (!el || !el.offsetWidth) return;
-      lens.style.setProperty("--lx", el.offsetLeft + "px");
-      lens.style.setProperty("--lw", el.offsetWidth + "px");
-    };
+    var geom = function (el) { return { x: el.offsetLeft, w: el.offsetWidth }; };
+    var centerOf = function (i) { return items[i].offsetLeft + items[i].offsetWidth / 2; };
 
-    var mark = function (i) {
+    // Tomchi qaysi bo'lim ustida bo'lsa, o'sha bo'lim yozuvi tomchining ichida ko'rinadi.
+    drop.onFrame(function (st) {
+      if (active < 0) return;
+      var cands = prev >= 0 && prev !== active ? [prev, active] : [active];
+      var cx = st.x + st.w / 2, near = cands[0], nd = 1e9, cov = -1;
+      cands.forEach(function (i) {
+        var d = Math.abs(cx - centerOf(i));
+        if (d < nd) { nd = d; near = i; }
+      });
+      if (nd < items[near].offsetWidth * 0.46) cov = near;
+      if (cov !== coveredIdx) {
+        coveredIdx = cov;
+        items.forEach(function (a, k) { a.classList.toggle("is-cov", k === cov); });
+      }
+      if (near !== labelIdx) {
+        labelIdx = near;
+        if (label) label.textContent = items[near].textContent.trim();
+      }
+    });
+
+    var mark = function () {
       items.forEach(function (a, k) {
-        if (k === i) a.setAttribute("aria-current", "page");
+        if (k === active) a.setAttribute("aria-current", "page");
         else a.removeAttribute("aria-current");
       });
-      if (label && items[i]) label.textContent = items[i].textContent.trim();
-    };
-
-    var select = function (i) {
-      active = i;
-      mark(i);
-      place(items[i]);
-      nav.classList.remove("is-moving");
-      void nav.offsetWidth;
-      nav.classList.add("is-moving");
-      window.clearTimeout(moveTimer);
-      moveTimer = window.setTimeout(function () { nav.classList.remove("is-moving"); }, 680);
     };
 
     var settle = function () {
-      if (active < 0) { nav.classList.remove("is-ready"); return; }
-      mark(active);
-      place(items[active]);
+      if (active < 0 || !items[active]) { nav.classList.remove("is-ready"); return; }
+      prev = active;
+      mark();
+      var g = geom(items[active]);
+      drop.snap(g.x, g.w);
       nav.classList.add("is-ready");
     };
-
     settle();
-    // Birinchi joylashuv animatsiyasiz; keyingilari silliq.
-    window.requestAnimationFrame(function () {
-      window.requestAnimationFrame(function () { nav.classList.add("is-anim"); });
-    });
+
+    var refit = function () {
+      if (active < 0) return;
+      var g = geom(items[active]);
+      if (drop.moving()) drop.to(g.x, g.w); else drop.snap(g.x, g.w);
+    };
+
+    var select = function (i) {
+      prev = active;
+      active = i;
+      mark();
+      var g = geom(items[i]);
+      drop.press(false);
+      drop.to(g.x, g.w);
+    };
 
     items.forEach(function (a, i) {
+      a.addEventListener("pointerdown", function (e) { if (e.button === 0) drop.press(true); });
       a.addEventListener("click", function (e) {
-        if (!plainClick(e, a)) return;
+        if (!plainClick(e, a)) { drop.press(false); return; }
         e.preventDefault();
-        if (i === active) { window.scrollTo({ top: 0, behavior: reduce() ? "auto" : "smooth" }); return; }
+        if (i === active) { drop.press(false); window.scrollTo({ top: 0, behavior: reduce() ? "auto" : "smooth" }); return; }
         if (navigating) return;
         select(i);
         go(a.href);
       });
     });
+    var release = function () { drop.press(false); };
+    nav.addEventListener("pointerup", release);
+    nav.addEventListener("pointercancel", release);
+    nav.addEventListener("pointerleave", release);
 
-    if (window.ResizeObserver) new ResizeObserver(function () { if (active >= 0) place(items[active]); }).observe(nav);
-    window.addEventListener("resize", function () { if (active >= 0) place(items[active]); });
-    if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(function () { if (active >= 0) place(items[active]); });
+    if (window.ResizeObserver) new ResizeObserver(refit).observe(nav);
+    window.addEventListener("resize", refit);
+    if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(refit);
 
     // Orqaga/oldinga (bfcache) qaytganda holat tiklansin.
     window.addEventListener("pageshow", function (e) {
@@ -114,31 +198,24 @@
     });
   }
 
-  /* ---------- Profil / savat kapsulasi: hover linza ---------- */
+  /* ---------- Profil / savat kapsulasi: hover tomchi ---------- */
   if (tools) {
     var tl = tools.querySelector(".lg-lens");
+    var tdrop = tl ? Drop(tl) : null;
     var drawer = $("cartDrawer");
     var cart = $("cartBtn");
 
     var toolTo = function (el) {
-      if (!el || el.hidden || !el.offsetWidth || !tl) return;
-      var set = function () {
-        tl.style.setProperty("--lx", el.offsetLeft + "px");
-        tl.style.setProperty("--lw", el.offsetWidth + "px");
-      };
-      if (!tools.classList.contains("is-hover")) {
-        tl.style.transition = "none";
-        set();
-        void tl.offsetWidth;
-        tl.style.transition = "";
-      }
-      set();
+      if (!el || el.hidden || !el.offsetWidth || !tdrop) return;
+      if (!tools.classList.contains("is-hover")) tdrop.snap(el.offsetLeft, el.offsetWidth);
+      else tdrop.to(el.offsetLeft, el.offsetWidth);
       tools.classList.add("is-hover");
     };
     var held = function () { return drawer && drawer.classList.contains("open") ? cart : null; };
-    var release = function () {
+    var releaseTools = function () {
       var h = held();
       if (h) toolTo(h); else tools.classList.remove("is-hover");
+      if (tdrop) tdrop.press(false);
     };
 
     tools.addEventListener("pointerover", function (e) {
@@ -146,15 +223,17 @@
       var t = e.target.closest ? e.target.closest(".lg-tool") : null;
       if (t && tools.contains(t)) toolTo(t);
     });
-    tools.addEventListener("pointerleave", release);
+    tools.addEventListener("pointerdown", function (e) { if (tdrop && e.pointerType !== "touch") tdrop.press(true); });
+    tools.addEventListener("pointerup", function () { if (tdrop) tdrop.press(false); });
+    tools.addEventListener("pointerleave", releaseTools);
     tools.addEventListener("focusin", function (e) {
       var t = e.target.closest ? e.target.closest(".lg-tool") : null;
       if (t && e.target.matches && e.target.matches(":focus-visible")) toolTo(t);
     });
-    tools.addEventListener("focusout", release);
+    tools.addEventListener("focusout", releaseTools);
 
     if (drawer && window.MutationObserver) {
-      new MutationObserver(function () { window.setTimeout(release, 0); })
+      new MutationObserver(function () { window.setTimeout(releaseTools, 0); })
         .observe(drawer, { attributes: true, attributeFilter: ["class"] });
     }
   }
