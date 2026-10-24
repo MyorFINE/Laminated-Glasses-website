@@ -1,0 +1,134 @@
+/* Laminated Glasses — SOF SHISHA + YENGIL ISHLASH.
+   Oxirgi ulanadi va oldingi qatlamlarni bekor qiladi.
+   1) Shisha endi sof: rangsiz, tiniq (oq / neytral). Ko'kimtir, amber va boshqa
+      rang berilgan nur, aks va soyalar olib tashlandi.
+   2) Tezlik: har bir mahsulot kartasidagi og'ir blur, doimiy aylanadigan
+      katta xiralashgan "dog'lar" va uzun animatsiyalar olib tashlandi. */
+
+:root {
+  --gl-tint: rgba(255, 255, 255, 0.72);
+  --gl-tint-2: rgba(255, 255, 255, 0.4);
+  --gl-edge: rgba(255, 255, 255, 0.9);
+  --gl-edge-soft: rgba(255, 255, 255, 0.5);
+  --gl-hi: rgba(255, 255, 255, 1);
+  --gl-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+  --gl-shadow-up: 0 22px 50px rgba(0, 0, 0, 0.13);
+  --gl-panel-shadow: 0 30px 80px rgba(0, 0, 0, 0.22);
+  --gl-scrim: rgba(0, 0, 0, 0.22);
+  --lg-glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.62));
+  --lg-glass-edge: rgba(255, 255, 255, 1);
+  --lg-glass-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+html[data-theme="dark"] {
+  --gl-tint: rgba(255, 255, 255, 0.09);
+  --gl-tint-2: rgba(255, 255, 255, 0.04);
+  --gl-edge: rgba(255, 255, 255, 0.24);
+  --gl-edge-soft: rgba(255, 255, 255, 0.1);
+  --gl-hi: rgba(255, 255, 255, 0.28);
+  --gl-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  --gl-shadow-up: 0 22px 50px rgba(0, 0, 0, 0.55);
+  --gl-panel-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+  --gl-scrim: rgba(0, 0, 0, 0.55);
+  --lg-glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+  --lg-glass-edge: rgba(255, 255, 255, 0.26);
+  --lg-glass-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Navigatsiya linzasi: sof tiniq shisha ---------- */
+.lg-drop {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.1) 55%, rgba(255, 255, 255, 0.16) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.85),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.22),
+    0 6px 12px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.lg-drop::before {
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.1) 55%, rgba(255, 255, 255, 0) 75%);
+}
+.lg-drop::after {
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 255, 255, 0.28), transparent 70%);
+}
+.lg-drop-label {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.lg-lens--hover .lg-drop { backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* Linza harakati tez bo'lsin */
+.lg-lens { transition: opacity 0.2s; }
+.lg-nav-item, .lg-tool { transition: color 0.15s var(--lg-ease), transform 0.25s var(--lg-ease); }
+.lg-nav-item span { transition: opacity 0.1s; }
+
+/* ---------- Telefon menyusi va burger: sof shisha, yengil ---------- */
+.lg-scrim { background: rgba(0, 0, 0, 0.18); transition: opacity 0.2s, visibility 0.2s; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.lg-scrim.open { backdrop-filter: none; -webkit-backdrop-filter: none; }
+html[data-theme="dark"] .lg-scrim { background: rgba(0, 0, 0, 0.55); }
+.lg-menu {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.78));
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow: inset 0 1px 0 #fff, 0 20px 50px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: opacity 0.15s, visibility 0.25s, transform 0.3s var(--lg-ease), clip-path 0.3s var(--lg-ease);
+}
+html[data-theme="dark"] .lg-menu {
+  background: linear-gradient(145deg, rgba(40, 40, 40, 0.9), rgba(24, 24, 24, 0.9));
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 20px 50px rgba(0, 0, 0, 0.65);
+}
+.lg-menu.open .lg-menu-link:nth-child(n) { transition-delay: 0s; }
+.lg-menu-link:hover { background: rgba(0, 0, 0, 0.06); }
+html[data-theme="dark"] .lg-menu-link:hover { background: rgba(255, 255, 255, 0.1); }
+.lg-burger, .lg-tool { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
+/* ---------- Katalog va kartalar: rangsiz nur, og'ir blur yo'q ---------- */
+.catalog::before, .catalog::after { display: none; animation: none; }
+.catalog { background: var(--ice); }
+html[data-theme="dark"] .catalog { background: var(--ice); }
+
+.product-card {
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.84));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: transform 0.28s var(--gl-ease), box-shadow 0.28s var(--gl-ease), border-color 0.2s;
+}
+html[data-theme="dark"] .product-card { background: linear-gradient(150deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)); }
+.product-card::before {
+  background: radial-gradient(120% 60% at 20% 0%, rgba(255, 255, 255, 0.5), transparent 60%);
+  transition: opacity 0.25s;
+}
+.product-card:hover { transform: translateY(-4px); }
+.product-card:hover::after { animation: none; opacity: 0; }
+
+/* Qalqib chiquvchi oynalar: blur kamaytirildi, tezroq ochiladi */
+.modal-overlay.open, .drawer-overlay.open, .lg-overlay.open, .lgd-overlay.open, .comments-overlay.open {
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.modal, .lg-card, .lgd-card, .comments-sheet, .drawer, .gate-card {
+  background-color: rgba(255, 255, 255, 0.94);
+}
+html[data-theme="dark"] .modal, html[data-theme="dark"] .lg-card, html[data-theme="dark"] .lgd-card,
+html[data-theme="dark"] .comments-sheet, html[data-theme="dark"] .drawer, html[data-theme="dark"] .gate-card {
+  background-color: rgba(28, 28, 28, 0.96);
+}
+
+/* Bosh sahifadagi doimiy harakatlar yengillashtirildi */
+.glass-visual, .hero-showcase, .showcase-orbit, .glass-shine { animation: none !important; }
+body:has(.hero) .hero:before { animation: none; }
+body:has(.hero) .pane-front {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.4)) !important;
+  backdrop-filter: none;
+}
+
+/* Sahifa bo'limlarini lazyroq chizish (ko'rinmaydigan joylar hisoblanmaydi) */
+.about, .news-section, .contact-modern, footer, .site-footer {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 600px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

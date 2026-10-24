@@ -89,6 +89,14 @@ async def add_security_headers(request, call_next):
     path = request.url.path
     if path.startswith("/api/admin") or path == "/admin":
         h["Cache-Control"] = "no-store"
+    elif request.method == "GET" and response.status_code in (200, 304) and "cache-control" not in h:
+        # Tezlik: statik fayllar brauzerda saqlansin, sahifa har safar qayta yuklanmasin.
+        if path.startswith("/uploads/"):
+            h["Cache-Control"] = "public, max-age=604800"
+        elif path.startswith(("/css/", "/js/")):
+            h["Cache-Control"] = "public, max-age=300, stale-while-revalidate=86400"
+        elif path in ("/", "/bosh-sahifa", "/mahsulotlar", "/yangiliklar", "/aloqa", "/konstruktor") or path.endswith(".html"):
+            h["Cache-Control"] = "no-cache"  # ETag bilan tekshiriladi, o'zgarmasa 304
     return response
 
 

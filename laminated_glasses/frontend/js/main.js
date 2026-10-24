@@ -2071,6 +2071,7 @@ async function init() {
   // Tezlik uchun: sayt sozlamalari, mijoz, kategoriyalar va mahsulotlar
   // ketma-ket emas, BIR VAQTDA so'raladi — bu birinchi ko'rinishgacha
   // bo'lgan vaqtni sezilarli qisqartiradi, ayniqsa sekin mobil tarmoqda.
+  const mePromise = state.token ? api("/auth/me").catch(() => null) : null;
   const [siteResult, categoriesResult] = await Promise.all([
     api("/site").catch(() => null),
     api("/categories").catch(() => []),
@@ -2090,9 +2091,8 @@ async function init() {
   // tiklanadi (token yaroqsiz bo'lsa api() uni o'zi tozalaydi).
   if (state.token) {
     try {
-      const me = await api("/auth/me");
-      applyCustomer(me);
-      refreshCart();
+      const me = await mePromise;
+      if (me) { applyCustomer(me); refreshCart(); }
     } catch (_) { /* sessiya yaroqsiz yoki tarmoq xatosi — mehmon sifatida davom etadi */ }
   }
 

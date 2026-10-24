@@ -8,7 +8,7 @@
   "use strict";
 
   var BP = 960;
-  var NAV_DELAY = 560;
+  var NAV_DELAY = 0; // sahifaga DARHOL o'tiladi; linza animatsiyasi yuklanish paytida davom etadi
   var doc = document;
   var $ = function (id) { return doc.getElementById(id); };
   var reduce = function () {
@@ -39,8 +39,22 @@
   function go(href) {
     if (navigating) return;
     navigating = true;
+    prefetch(href);
     var run = function () { location.href = href; };
-    if (reduce()) run(); else window.setTimeout(run, NAV_DELAY);
+    if (reduce() || NAV_DELAY <= 0) run(); else window.setTimeout(run, NAV_DELAY);
+  }
+
+  // Sahifani sichqoncha ustiga kelganda/bosganda oldindan yuklab qo'yish.
+  var prefetched = {};
+  function prefetch(href) {
+    try {
+      var u = new URL(href, location.href);
+      if (u.origin !== location.origin || prefetched[u.pathname]) return;
+      prefetched[u.pathname] = 1;
+      var l = doc.createElement("link");
+      l.rel = "prefetch"; l.as = "document"; l.href = u.href;
+      doc.head.appendChild(l);
+    } catch (_) { /* e'tiborsiz */ }
   }
 
   function plainClick(e, a) {
@@ -76,8 +90,8 @@
       var dt = Math.min((t - last) / 1000, 1 / 30);
       last = t;
       if (dt <= 0) dt = 1 / 60;
-      s.vx += (190 * (s.tx - s.x) - 17 * s.vx) * dt;  s.x += s.vx * dt;
-      s.vw += (240 * (s.tw - s.w) - 22 * s.vw) * dt;  s.w += s.vw * dt;
+      s.vx += (320 * (s.tx - s.x) - 25 * s.vx) * dt;  s.x += s.vx * dt;
+      s.vw += (380 * (s.tw - s.w) - 29 * s.vw) * dt;  s.w += s.vw * dt;
       s.pv += (420 * (s.pt - s.pr) - 26 * s.pv) * dt; s.pr += s.pv * dt;
       var rest = Math.abs(s.tx - s.x) < 0.04 && Math.abs(s.vx) < 0.5 &&
                  Math.abs(s.tw - s.w) < 0.04 && Math.abs(s.vw) < 0.5 &&
@@ -115,15 +129,16 @@
     var drop = Drop(lens);
     var active = findActive(items);
     var prev = active;
-    var coveredIdx = -2, labelIdx = -2;
+    var coveredIdx = -2, labelIdx = -2, hov = -1;
 
     var geom = function (el) { return { x: el.offsetLeft, w: el.offsetWidth }; };
     var centerOf = function (i) { return items[i].offsetLeft + items[i].offsetWidth / 2; };
 
     // Tomchi qaysi bo'lim ustida bo'lsa, o'sha bo'lim yozuvi tomchining ichida ko'rinadi.
     drop.onFrame(function (st) {
-      if (active < 0) return;
-      var cands = prev >= 0 && prev !== active ? [prev, active] : [active];
+      var cands = [];
+      [active, prev, hov].forEach(function (i) { if (i >= 0 && cands.indexOf(i) === -1) cands.push(i); });
+      if (!cands.length) return;
       var cx = st.x + st.w / 2, near = cands[0], nd = 1e9, cov = -1;
       cands.forEach(function (i) {
         var d = Math.abs(cx - centerOf(i));
@@ -163,9 +178,25 @@
       if (drop.moving()) drop.to(g.x, g.w); else drop.snap(g.x, g.w);
     };
 
+    // Sichqoncha bilan harakatlanganda linza ostidagi bo'limga ergashadi,
+    // chiqib ketsa faol bo'limga qaytadi (profil/savat kapsulasidagi kabi).
+    var hoverTo = function (i) {
+      if (!items[i]) return;
+      hov = i;
+      var g = geom(items[i]);
+      if (!nav.classList.contains("is-ready")) { drop.snap(g.x, g.w); nav.classList.add("is-ready"); }
+      else drop.to(g.x, g.w);
+    };
+    var hoverOff = function () {
+      hov = -1;
+      if (active >= 0 && items[active]) { var g = geom(items[active]); drop.to(g.x, g.w); }
+      else nav.classList.remove("is-ready");
+    };
+
     var select = function (i) {
       prev = active;
       active = i;
+      hov = i;
       mark();
       var g = geom(items[i]);
       drop.press(false);
@@ -173,7 +204,9 @@
     };
 
     items.forEach(function (a, i) {
-      a.addEventListener("pointerdown", function (e) { if (e.button === 0) drop.press(true); });
+      a.addEventListener("pointerenter", function (e) { if (e.pointerType !== "touch") { hoverTo(i); prefetch(a.href); } });
+      a.addEventListener("focus", function () { if (a.matches && a.matches(":focus-visible")) hoverTo(i); });
+      a.addEventListener("pointerdown", function (e) { if (e.button === 0) { drop.press(true); prefetch(a.href); } });
       a.addEventListener("click", function (e) {
         if (!plainClick(e, a)) { drop.press(false); return; }
         e.preventDefault();
@@ -186,7 +219,8 @@
     var release = function () { drop.press(false); };
     nav.addEventListener("pointerup", release);
     nav.addEventListener("pointercancel", release);
-    nav.addEventListener("pointerleave", release);
+    nav.addEventListener("pointerleave", function () { release(); if (!navigating) hoverOff(); });
+    nav.addEventListener("focusout", function () { if (!navigating) hoverOff(); });
 
     if (window.ResizeObserver) new ResizeObserver(refit).observe(nav);
     window.addEventListener("resize", refit);
@@ -194,7 +228,7 @@
 
     // Orqaga/oldinga (bfcache) qaytganda holat tiklansin.
     window.addEventListener("pageshow", function (e) {
-      if (e.persisted) { navigating = false; active = findActive(items); settle(); }
+      if (e.persisted) { navigating = false; hov = -1; active = findActive(items); settle(); }
     });
   }
 
@@ -287,6 +321,7 @@
   });
 
   links.forEach(function (a, i) {
+    a.addEventListener("pointerdown", function () { prefetch(a.href); }, { passive: true });
     a.addEventListener("click", function (e) {
       if (!plainClick(e, a)) return;
       e.preventDefault();
@@ -295,8 +330,7 @@
       if (navigating) return;
       navigating = true;
       var href = a.href;
-      var run = function () { location.href = href; };
-      if (reduce()) run(); else window.setTimeout(run, 320);
+      location.href = href;
     });
   });
 
