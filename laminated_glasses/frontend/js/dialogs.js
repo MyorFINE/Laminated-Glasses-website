@@ -71,7 +71,7 @@
         setTimeout(function () {
           overlay.remove();
           if (!document.querySelector(".lgd-overlay")) document.body.classList.remove("lgd-lock");
-        }, 180);
+        }, 800);
         if (previouslyFocused && previouslyFocused.focus) {
           try { previouslyFocused.focus(); } catch (e) { /* jim */ }
         }

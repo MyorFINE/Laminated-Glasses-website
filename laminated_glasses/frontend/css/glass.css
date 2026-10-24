@@ -1,0 +1,510 @@
+/* Laminated Glasses — "suyuq shisha" qatlami.
+   Mahsulot kartalari, filtrlar, qalqib chiquvchi oynalar (modal, savat, profil,
+   izohlar, dialoglar) va bildirishnoma. Ochilganda orqa fon sekin xiralashadi,
+   oyna esa sokin, uzun va yumshoq egri chiziq bilan joyiga o'rnashadi.
+   Qo'shimcha: kuchsiz qurilmalarda (.lite) og'ir blur o'chiriladi. */
+
+:root {
+  --gl-ease: cubic-bezier(0.22, 0.8, 0.24, 1);   /* sokin, uzun "to'xtash" */
+  --gl-soft: cubic-bezier(0.32, 0.72, 0, 1);
+  --gl-tint: rgba(255, 255, 255, 0.58);
+  --gl-tint-2: rgba(232, 243, 251, 0.3);
+  --gl-edge: rgba(255, 255, 255, 0.78);
+  --gl-edge-soft: rgba(255, 255, 255, 0.35);
+  --gl-hi: rgba(255, 255, 255, 0.95);
+  --gl-shadow: 0 18px 46px rgba(6, 38, 61, 0.13);
+  --gl-shadow-up: 0 30px 70px rgba(6, 38, 61, 0.2);
+  --gl-panel-shadow: 0 40px 110px rgba(6, 38, 61, 0.34);
+  --gl-scrim: rgba(8, 36, 58, 0.26);
+}
+
+html[data-theme="dark"] {
+  --gl-tint: rgba(38, 66, 92, 0.52);
+  --gl-tint-2: rgba(14, 30, 44, 0.34);
+  --gl-edge: rgba(170, 205, 235, 0.3);
+  --gl-edge-soft: rgba(170, 205, 235, 0.14);
+  --gl-hi: rgba(255, 255, 255, 0.2);
+  --gl-shadow: 0 18px 46px rgba(0, 0, 0, 0.45);
+  --gl-shadow-up: 0 30px 70px rgba(0, 0, 0, 0.55);
+  --gl-panel-shadow: 0 40px 110px rgba(0, 0, 0, 0.7);
+  --gl-scrim: rgba(0, 8, 16, 0.5);
+}
+
+/* ================================================================
+   1. Katalog foni — shisha ko'rinishi uchun orqada yumshoq nur
+   ================================================================ */
+
+.catalog {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--white) 0%, var(--ice) 22%, var(--ice) 100%);
+}
+.catalog::before,
+.catalog::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(40px);
+  will-change: transform;
+}
+.catalog::before {
+  width: min(560px, 70vw);
+  height: min(560px, 70vw);
+  left: -12%;
+  top: 8%;
+  background: radial-gradient(circle, rgba(46, 134, 200, 0.34), transparent 68%);
+  animation: gl-drift-a 26s ease-in-out infinite alternate;
+}
+.catalog::after {
+  width: min(620px, 78vw);
+  height: min(620px, 78vw);
+  right: -14%;
+  bottom: 4%;
+  background:
+    radial-gradient(circle at 35% 40%, rgba(224, 152, 58, 0.26), transparent 62%),
+    radial-gradient(circle at 70% 70%, rgba(140, 196, 232, 0.4), transparent 66%);
+  animation: gl-drift-b 32s ease-in-out infinite alternate;
+}
+@keyframes gl-drift-a { to { transform: translate3d(14%, 18%, 0) scale(1.12); } }
+@keyframes gl-drift-b { to { transform: translate3d(-16%, -14%, 0) scale(1.08); } }
+
+html[data-theme="dark"] .catalog { background: linear-gradient(180deg, var(--ice) 0%, #08141d 100%); }
+html[data-theme="dark"] .catalog::before { background: radial-gradient(circle, rgba(46, 134, 200, 0.3), transparent 68%); }
+html[data-theme="dark"] .catalog::after {
+  background:
+    radial-gradient(circle at 35% 40%, rgba(224, 152, 58, 0.16), transparent 62%),
+    radial-gradient(circle at 70% 70%, rgba(74, 168, 232, 0.24), transparent 66%);
+}
+
+/* ================================================================
+   2. Mahsulot kartalari
+   ================================================================ */
+
+.product-grid { gap: 26px; }
+
+.product-card {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid var(--gl-edge);
+  border-radius: 28px;
+  padding: 8px;
+  background:
+    linear-gradient(150deg, var(--gl-tint) 0%, var(--gl-tint-2) 46%, var(--gl-tint) 100%);
+  backdrop-filter: blur(20px) saturate(1.7);
+  -webkit-backdrop-filter: blur(20px) saturate(1.7);
+  box-shadow:
+    inset 0 1.5px 0 var(--gl-hi),
+    inset 0 -1px 0 var(--gl-edge-soft),
+    inset 1px 0 0 var(--gl-edge-soft),
+    var(--gl-shadow);
+  overflow: hidden;
+  transition:
+    transform 0.8s var(--gl-ease),
+    box-shadow 0.8s var(--gl-ease),
+    border-color 0.6s var(--gl-ease),
+    opacity 0.8s var(--gl-ease);
+}
+
+/* Yuqoridan tushadigan yumshoq yoritish */
+.product-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 60% at 20% 0%, rgba(255, 255, 255, 0.55), transparent 60%),
+    radial-gradient(90% 50% at 100% 100%, rgba(140, 196, 232, 0.2), transparent 70%);
+  opacity: 0.9;
+  transition: opacity 0.8s var(--gl-ease);
+}
+/* Hover'da shisha bo'ylab o'tadigan sekin yaltirash */
+.product-card::after {
+  content: "";
+  position: absolute;
+  inset: -20% auto -20% -60%;
+  width: 45%;
+  z-index: 4;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.34), transparent);
+  transform: skewX(-18deg) translateX(0);
+  opacity: 0;
+}
+.product-card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    inset 0 1.5px 0 var(--gl-hi),
+    inset 0 -1px 0 var(--gl-edge-soft),
+    inset 1px 0 0 var(--gl-edge-soft),
+    var(--gl-shadow-up);
+}
+.product-card:hover::before { opacity: 1; }
+.product-card:hover::after { animation: gl-sheen 1.5s var(--gl-ease) both; }
+@keyframes gl-sheen {
+  0% { opacity: 0; transform: skewX(-18deg) translateX(0); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: skewX(-18deg) translateX(520%); }
+}
+html[data-theme="dark"] .product-card:hover { border-color: rgba(170, 205, 235, 0.5); }
+
+.product-media {
+  border-radius: 21px;
+  overflow: hidden;
+  background: var(--ice-2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5), 0 6px 18px rgba(6, 38, 61, 0.1);
+}
+.product-media:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5), 0 6px 18px rgba(6, 38, 61, 0.1); }
+.product-gallery { background: transparent; }
+.product-gallery .gallery-shot { transition-duration: 1.1s, 1.8s; }
+
+.gallery-count {
+  background: rgba(8, 28, 44, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.product-body { padding: 16px 12px 12px; gap: 10px; }
+
+.product-tag {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--gl-edge);
+  box-shadow: inset 0 1px 0 var(--gl-hi);
+  color: var(--sky-deep);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+html[data-theme="dark"] .product-tag { background: rgba(74, 168, 232, 0.14); }
+
+.product-name { transition: color 0.4s var(--gl-ease); }
+.product-card:hover .product-name { color: var(--sky-deep); }
+
+.product-foot {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+/* "Savatga" — shisha ustidagi navy tomchi */
+.product-card .btn-primary {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: linear-gradient(180deg, rgba(18, 85, 127, 0.96), rgba(6, 38, 61, 0.96));
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 18px rgba(6, 38, 61, 0.24);
+  transition: transform 0.5s var(--gl-ease), box-shadow 0.5s var(--gl-ease), filter 0.5s;
+}
+.product-card .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(46, 134, 200, 0.98), rgba(18, 85, 127, 0.98));
+  transform: translateY(-2px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 12px 26px rgba(18, 85, 127, 0.36);
+}
+.product-card .btn-primary:active:not(:disabled) { transform: scale(0.96); transition-duration: 0.15s; }
+html[data-theme="dark"] .product-card .btn-primary { color: #fff; }
+
+/* Yurakcha va izoh tugmalari */
+.like-btn,
+.comment-btn {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--gl-edge);
+  box-shadow: inset 0 1px 0 var(--gl-hi);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.45s var(--gl-ease), background 0.45s, color 0.45s, border-color 0.45s;
+}
+.like-card { top: 16px; right: 16px; background: rgba(255, 255, 255, 0.5); box-shadow: inset 0 1px 0 var(--gl-hi), 0 6px 16px rgba(6, 38, 61, 0.18); }
+.like-btn.liked, .like-card.liked { background: rgba(255, 235, 239, 0.7); }
+html[data-theme="dark"] .like-btn,
+html[data-theme="dark"] .comment-btn,
+html[data-theme="dark"] .like-card { background: rgba(26, 48, 69, 0.55); }
+html[data-theme="dark"] .like-btn.liked,
+html[data-theme="dark"] .like-card.liked { background: rgba(120, 30, 46, 0.5); }
+
+/* Skeleton ham shisha */
+.skeleton {
+  border-radius: 28px;
+  border: 1px solid var(--gl-edge);
+  background:
+    linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%),
+    linear-gradient(150deg, var(--gl-tint), var(--gl-tint-2));
+  background-size: 250% 100%, 100% 100%;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Kartalar sokin paydo bo'lsin (scroll reveal) */
+.reveal { transition: opacity 1s var(--gl-ease), transform 1s var(--gl-ease); }
+.product-card.reveal { transform: translateY(26px) scale(0.985); }
+.product-card.reveal.in-view { transform: translateY(0) scale(1); }
+.product-card.reveal.in-view:hover { transform: translateY(-8px); }
+
+/* ================================================================
+   3. Qidiruv va filtrlar
+   ================================================================ */
+
+.search-box input {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--gl-edge);
+  box-shadow: inset 0 1px 0 var(--gl-hi), 0 8px 22px rgba(6, 38, 61, 0.06);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  transition: border-color 0.5s var(--gl-ease), box-shadow 0.5s var(--gl-ease), background 0.5s;
+}
+.search-box input:focus {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: var(--sky);
+  box-shadow: inset 0 1px 0 var(--gl-hi), 0 0 0 4px rgba(46, 134, 200, 0.16), 0 12px 28px rgba(6, 38, 61, 0.1);
+}
+html[data-theme="dark"] .search-box input { background: rgba(20, 40, 58, 0.55); }
+html[data-theme="dark"] .search-box input:focus { background: rgba(26, 48, 69, 0.8); }
+
+.filters { padding: 4px 4px 14px; }
+.filter-pill {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--gl-edge);
+  box-shadow: inset 0 1px 0 var(--gl-hi), 0 6px 16px rgba(6, 38, 61, 0.05);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  transition: transform 0.5s var(--gl-ease), background 0.5s var(--gl-ease), color 0.4s, border-color 0.5s, box-shadow 0.5s;
+}
+.filter-pill:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.78); border-color: var(--gl-edge); }
+.filter-pill.active {
+  background: linear-gradient(180deg, rgba(18, 85, 127, 0.96), rgba(6, 38, 61, 0.96));
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 10px 22px rgba(6, 38, 61, 0.25);
+}
+html[data-theme="dark"] .filter-pill { background: rgba(20, 40, 58, 0.5); }
+html[data-theme="dark"] .filter-pill:hover { background: rgba(38, 66, 92, 0.7); }
+html[data-theme="dark"] .filter-pill.active { background: linear-gradient(180deg, #2e86c8, #12557f); color: #fff; }
+
+/* ================================================================
+   4. Oynalar ochilganda orqa fon sekin xiralashadi
+   ================================================================ */
+
+.modal-overlay,
+.drawer-overlay,
+.lg-overlay,
+.lgd-overlay,
+.comments-overlay {
+  background: var(--gl-scrim);
+  backdrop-filter: blur(0) saturate(1);
+  -webkit-backdrop-filter: blur(0) saturate(1);
+  transition:
+    opacity 0.7s var(--gl-soft),
+    visibility 0s linear 0.7s,
+    backdrop-filter 0.7s var(--gl-soft),
+    -webkit-backdrop-filter 0.7s var(--gl-soft);
+}
+.modal-overlay.open,
+.drawer-overlay.open,
+.lg-overlay.open,
+.lgd-overlay.open,
+.comments-overlay.open {
+  backdrop-filter: blur(16px) saturate(1.25);
+  -webkit-backdrop-filter: blur(16px) saturate(1.25);
+  transition:
+    opacity 0.7s var(--gl-soft),
+    visibility 0s,
+    backdrop-filter 0.7s var(--gl-soft),
+    -webkit-backdrop-filter 0.7s var(--gl-soft);
+}
+
+/* display:none o'rniga visibility — shunda yopilish ham silliq bo'ladi */
+.modal-overlay,
+.lg-overlay,
+.comments-overlay {
+  display: flex;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  animation: none;
+}
+.modal-overlay.open,
+.lg-overlay.open,
+.comments-overlay.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  animation: none;
+}
+.lgd-overlay { visibility: hidden; pointer-events: none; }
+.lgd-overlay.open { visibility: visible; pointer-events: auto; }
+.drawer-overlay { visibility: hidden; }
+.drawer-overlay.open { visibility: visible; }
+
+/* ---------- Shisha panellar ---------- */
+
+.modal,
+.lg-card,
+.lgd-card,
+.comments-sheet,
+.gate-card {
+  border: 1px solid var(--gl-edge);
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.82) 0%, rgba(236, 246, 252, 0.56) 50%, rgba(255, 255, 255, 0.7) 100%);
+  box-shadow: inset 0 1.5px 0 var(--gl-hi), inset 0 -1px 0 var(--gl-edge-soft), var(--gl-panel-shadow);
+  backdrop-filter: blur(34px) saturate(1.8);
+  -webkit-backdrop-filter: blur(34px) saturate(1.8);
+  border-radius: 30px;
+}
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] .lg-card,
+html[data-theme="dark"] .lgd-card,
+html[data-theme="dark"] .comments-sheet,
+html[data-theme="dark"] .gate-card {
+  background: linear-gradient(150deg, rgba(40, 70, 98, 0.78) 0%, rgba(14, 30, 44, 0.74) 52%, rgba(30, 56, 80, 0.76) 100%);
+}
+
+/* Ochilish: pastdan yumshoq ko'tarilib, shisha o'rnashadi */
+.modal,
+.lg-card,
+.comments-sheet {
+  opacity: 0;
+  transform: translateY(26px) scale(0.955);
+  animation: none;
+  transition: opacity 0.7s var(--gl-soft), transform 0.9s var(--gl-ease);
+}
+.modal-overlay.open .modal,
+.lg-overlay.open .lg-card,
+.comments-overlay.open .comments-sheet {
+  opacity: 1;
+  transform: none;
+  animation: none;
+  transition-delay: 0.06s;
+}
+.lgd-card {
+  opacity: 0;
+  transform: translateY(26px) scale(0.955);
+  transition: opacity 0.7s var(--gl-soft), transform 0.9s var(--gl-ease);
+}
+.lgd-overlay.open .lgd-card { opacity: 1; transform: none; transition-delay: 0.06s; }
+.lgd-overlay { transition-duration: 0.7s; }
+
+.modal-media { margin: 8px 8px 0; border-radius: 24px; overflow: hidden; background: var(--ice-2); }
+.modal-body { padding: 22px 24px 26px; }
+
+.modal-close {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--gl-edge);
+  box-shadow: inset 0 1px 0 var(--gl-hi), 0 6px 16px rgba(6, 38, 61, 0.16);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: transform 0.5s var(--gl-ease), background 0.4s;
+}
+.modal-close:hover { transform: rotate(90deg) scale(1.06); background: rgba(255, 255, 255, 0.85); }
+html[data-theme="dark"] .modal-close { background: rgba(26, 48, 69, 0.6); }
+
+.detail-thumbs { background: transparent; }
+.detail-thumb { border-radius: 12px; background: rgba(255, 255, 255, 0.5); transition: border-color 0.4s var(--gl-ease), transform 0.4s var(--gl-ease); }
+.detail-thumb:hover { transform: translateY(-2px); }
+.detail-arrow, .detail-zoom {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--gl-edge);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.detail-counter { background: rgba(8, 28, 44, 0.42); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.detail-gallery { background: var(--ice-2); }
+
+.order-preview,
+.checkout-modal .code { background: rgba(255, 255, 255, 0.5); border: 1px solid var(--gl-edge); box-shadow: inset 0 1px 0 var(--gl-hi); }
+html[data-theme="dark"] .order-preview,
+html[data-theme="dark"] .checkout-modal .code { background: rgba(14, 30, 44, 0.5); }
+
+/* ---------- Savat paneli: o'ngdan shisha varaq ---------- */
+
+.drawer {
+  width: min(440px, calc(100% - 14px));
+  top: 7px;
+  right: 7px;
+  height: calc(100% - 14px);
+  border: 1px solid var(--gl-edge);
+  border-radius: 30px;
+  overflow: hidden;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.82), rgba(236, 246, 252, 0.56) 55%, rgba(255, 255, 255, 0.72));
+  backdrop-filter: blur(34px) saturate(1.8);
+  -webkit-backdrop-filter: blur(34px) saturate(1.8);
+  transform: translateX(calc(100% + 24px));
+  transition: transform 0.9s var(--gl-ease), box-shadow 0.9s var(--gl-ease), visibility 0s linear 0.9s;
+}
+.drawer.open {
+  transform: translateX(0);
+  box-shadow: inset 0 1.5px 0 var(--gl-hi), var(--gl-panel-shadow);
+  transition: transform 0.9s var(--gl-ease), box-shadow 0.9s var(--gl-ease), visibility 0s;
+}
+html[data-theme="dark"] .drawer {
+  background: linear-gradient(150deg, rgba(40, 70, 98, 0.8), rgba(14, 30, 44, 0.76) 55%, rgba(30, 56, 80, 0.78));
+}
+html[data-theme="dark"] .drawer.open { box-shadow: inset 0 1.5px 0 var(--gl-hi), var(--gl-panel-shadow); }
+.drawer-head { border-bottom-color: var(--line-strong); }
+.drawer-foot { border-top: 1px solid var(--line-strong); background: transparent; }
+
+/* ---------- Bildirishnoma ---------- */
+
+.toast {
+  background: rgba(8, 36, 58, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 16px 40px rgba(6, 38, 61, 0.3);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  color: #fff;
+  transform: translate(-50%, 18px) scale(0.96);
+  transition: opacity 0.6s var(--gl-soft), transform 0.8s var(--gl-ease);
+}
+.toast.show { transform: translate(-50%, 0) scale(1); }
+.toast.error { background: rgba(150, 40, 36, 0.66); }
+html[data-theme="dark"] .toast { background: rgba(34, 62, 88, 0.66); color: #e8f1f8; }
+html[data-theme="dark"] .toast.error { background: rgba(122, 39, 35, 0.72); }
+
+/* ---------- Kirish oynasi (Google) ---------- */
+.gate { backdrop-filter: blur(0); }
+.gate-card { border-radius: 32px; }
+
+/* ---------- Rasm kattalashtirgich ---------- */
+.product-lightbox { background: rgba(4, 12, 20, 0.72); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+
+/* ================================================================
+   5. Moslashuvchanlik va yengil rejim
+   ================================================================ */
+
+@media (max-width: 560px) {
+  .product-grid { gap: 20px; }
+  .product-card { border-radius: 24px; padding: 7px; }
+  .product-media { border-radius: 18px; }
+  .drawer { width: calc(100% - 12px); top: 6px; right: 6px; height: calc(100% - 12px); border-radius: 26px; }
+  .modal, .lg-card, .lgd-card, .comments-sheet { border-radius: 26px; }
+}
+
+/* Kuchsiz qurilmalar: og'ir blur o'rniga zichroq shisha tusi */
+.lite .product-card,
+.lite .search-box input,
+.lite .filter-pill,
+.lite .like-btn,
+.lite .comment-btn,
+.lite .skeleton,
+.lite .tag { backdrop-filter: none; -webkit-backdrop-filter: none; }
+.lite .product-card { background: rgba(255, 255, 255, 0.82); }
+.lite .catalog::before, .lite .catalog::after { animation: none; filter: blur(24px); }
+.lite .product-card:hover::after { animation: none; }
+.lite .modal-overlay.open, .lite .drawer-overlay.open, .lite .lg-overlay.open,
+.lite .lgd-overlay.open, .lite .comments-overlay.open { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.lite .modal, .lite .lg-card, .lite .lgd-card, .lite .comments-sheet, .lite .drawer, .lite .gate-card {
+  backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(250, 253, 255, 0.95);
+}
+html[data-theme="dark"].lite .product-card { background: rgba(20, 40, 58, 0.85); }
+html[data-theme="dark"].lite .modal, html[data-theme="dark"].lite .lg-card, html[data-theme="dark"].lite .lgd-card,
+html[data-theme="dark"].lite .comments-sheet, html[data-theme="dark"].lite .drawer, html[data-theme="dark"].lite .gate-card { background: rgba(17, 33, 48, 0.96); }
+
+@media (prefers-reduced-motion: reduce) {
+  .catalog::before, .catalog::after { animation: none; }
+  .product-card:hover::after { animation: none; }
+  .product-card, .modal, .lg-card, .lgd-card, .comments-sheet, .drawer, .toast { transition-duration: 0.01ms !important; }
+  .modal-overlay, .lg-overlay, .lgd-overlay, .drawer-overlay, .comments-overlay { transition-duration: 0.01ms !important; }
+}

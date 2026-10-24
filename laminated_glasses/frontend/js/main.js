@@ -2019,6 +2019,7 @@ el("checkoutBtn").addEventListener("click", async () => {
 /* Modal boshqaruvi */
 
 function openModal(id) {
+  void el(id).offsetWidth; // yangi qo'shilgan oyna ham silliq (o'tish bilan) ochilsin
   el(id).classList.add("open");
   lockScroll(true);
 }
@@ -2052,7 +2053,7 @@ document.addEventListener("keydown", (e) => {
     closeGate();
   }
   closeCart();
-  closeMobileNav();
+  // Mobil menyuni Escape bilan yopish — js/nav.js ichida.
 });
 
 /* Ishga tushirish */
