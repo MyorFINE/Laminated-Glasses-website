@@ -132,3 +132,47 @@ body:has(.hero) .pane-front {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ================================================================
+   Navigatsiya sayt dizayniga qo'shildi (desktop):
+   to'q kapsula FONI olib tashlandi — menyu, profil va savat
+   sarlavhaning o'zida turadi. Faqat suyuq shisha linza qoladi.
+   ================================================================ */
+@media (min-width: 961px) {
+  .lg-nav, .lg-tools {
+    background: none;
+    box-shadow: none;
+    --lg-pill-text: var(--navy-soft);
+    --lg-pill-hot: var(--navy);
+  }
+  .lg-nav::before, .lg-nav::after,
+  .lg-tools::before, .lg-tools::after { display: none; }
+
+  .lg-nav-item:hover, .lg-tool:hover { color: var(--navy); }
+  .lg-nav-item[aria-current="page"] { color: var(--navy); }
+  .lg-tool .cart-count { box-shadow: 0 0 0 2px var(--white); }
+
+  /* Linza oq fonda ko'rinadigan sof shisha */
+  .lg-drop {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.55) 100%);
+    border: 1px solid rgba(6, 38, 61, 0.1);
+    box-shadow:
+      inset 0 1.5px 1px #fff,
+      inset 0 -1.5px 2px rgba(6, 38, 61, 0.06),
+      0 4px 14px rgba(6, 38, 61, 0.12),
+      0 1px 2px rgba(6, 38, 61, 0.1);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .lg-drop::before { background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 70%); }
+  .lg-drop::after { display: none; }
+  .lg-drop-label { color: var(--navy); text-shadow: none; }
+
+  html[data-theme="dark"] .lg-drop {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.07) 100%);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.35), 0 4px 14px rgba(0, 0, 0, 0.45);
+  }
+  html[data-theme="dark"] .lg-drop-label { color: #fff; }
+  html[data-theme="dark"] .lg-tool .cart-count { box-shadow: 0 0 0 2px var(--white); }
+}
