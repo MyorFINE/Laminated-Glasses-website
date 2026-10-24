@@ -1986,37 +1986,7 @@ el("cartBtn").addEventListener("click", openCart);
 el("cartCloseBtn").addEventListener("click", closeCart);
 el("drawerOverlay").addEventListener("click", closeCart);
 
-/* Mobil menyu — main-nav 900px dan tor ekranda yashirilgani uchun kerak */
-
-function openMobileNav() {
-  el("mobileNav").classList.add("open");
-  el("mobileNavOverlay").classList.add("open");
-  el("menuToggle").setAttribute("aria-expanded", "true");
-  lockScroll(true);
-}
-
-function closeMobileNav() {
-  el("mobileNav").classList.remove("open");
-  el("mobileNavOverlay").classList.remove("open");
-  el("menuToggle").setAttribute("aria-expanded", "false");
-  if (!document.querySelector(".modal-overlay.open") && !el("cartDrawer").classList.contains("open")) {
-    lockScroll(false);
-  }
-}
-
-el("menuToggle").addEventListener("click", () => {
-  const isOpen = el("mobileNav").classList.contains("open");
-  isOpen ? closeMobileNav() : openMobileNav();
-});
-el("mobileNavClose").addEventListener("click", closeMobileNav);
-el("mobileNavOverlay").addEventListener("click", closeMobileNav);
-document.querySelectorAll(".mobile-nav a").forEach((a) => {
-  a.addEventListener("click", closeMobileNav);
-  if (a.pathname === window.location.pathname) a.classList.add("active");
-});
-document.querySelectorAll(".main-nav a").forEach((a) => {
-  if (a.pathname === window.location.pathname) a.classList.add("active");
-});
+/* Navigatsiya (desktop kapsula + telefon menyusi) — /js/nav.js ichida. */
 
 /* Rasmiylashtirish — Telegram faqat shu yerda ko'rsatiladi */
 

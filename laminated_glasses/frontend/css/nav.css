@@ -1,0 +1,544 @@
+/* Laminated Glasses — navigatsiya (suyuq shisha "linza" uslubi).
+   Desktop: tepada to'q ko'k kapsula, faol bo'limni suyuq shisha linza silliq
+   ko'chib yuradi (cho'ziladi, qisiladi). Telefon: shisha burger tugma va
+   yuqoridan ochiladigan shisha menyu. Ranglar saytning o'z palitrasi:
+   dengiz ko'ki, oyna-moviy va iliq amber. Dark theme'ga to'liq moslangan. */
+
+:root {
+  --lg-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --lg-pill: #06263d;
+  --lg-pill-2: #0b3350;
+  --lg-pill-edge: rgba(255, 255, 255, 0.14);
+  --lg-pill-text: rgba(222, 236, 246, 0.8);
+  --lg-pill-hot: #ffffff;
+  --lg-gold: #f4bd68;
+  --lg-pill-shadow: 0 14px 30px rgba(6, 38, 61, 0.24);
+  --lg-glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(220, 234, 245, 0.6));
+  --lg-glass-edge: rgba(255, 255, 255, 0.95);
+  --lg-glass-shadow: 0 10px 26px rgba(6, 38, 61, 0.16);
+}
+
+html[data-theme="dark"] {
+  --lg-pill: #14304a;
+  --lg-pill-2: #1b3d5c;
+  --lg-pill-edge: rgba(170, 205, 235, 0.26);
+  --lg-pill-text: rgba(214, 231, 244, 0.78);
+  --lg-gold: #f1b765;
+  --lg-pill-shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
+  --lg-glass-bg: linear-gradient(145deg, rgba(48, 82, 112, 0.8), rgba(22, 44, 64, 0.65));
+  --lg-glass-edge: rgba(170, 205, 235, 0.3);
+  --lg-glass-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- Sarlavha ---------- */
+
+.site-header {
+  transition: box-shadow 0.3s var(--lg-ease);
+}
+.site-header.is-scrolled {
+  box-shadow: 0 10px 34px rgba(6, 38, 61, 0.1);
+}
+html[data-theme="dark"] .site-header.is-scrolled {
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+}
+
+.site-header .wrap {
+  padding: 10px 0;
+}
+
+.brand { overflow: hidden; }
+.brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.header-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+/* ---------- Desktop: asosiy kapsula ---------- */
+
+.lg-nav,
+.lg-tools {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  height: 52px;
+  padding: 5px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, var(--lg-pill-2), var(--lg-pill) 70%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), var(--lg-pill-shadow);
+}
+
+.lg-nav::before,
+.lg-tools::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid var(--lg-pill-edge);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.lg-nav-item {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 0 17px;
+  border-radius: 15px;
+  color: var(--lg-pill-text);
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.25s var(--lg-ease);
+}
+.lg-nav-item span { transition: opacity 0.18s; }
+.lg-nav-item:hover { color: var(--lg-pill-hot); }
+/* Faol bo'lim yozuvi linza ichida ko'rinadi (main.html'dagi kabi) */
+.lg-nav-item[aria-current="page"] span { opacity: 0; }
+
+.lg-nav-item:focus-visible,
+.lg-tool:focus-visible,
+.lg-burger:focus-visible,
+.lg-menu-link:focus-visible {
+  outline: 2px solid var(--lg-gold);
+  outline-offset: 3px;
+}
+
+/* ---------- Suyuq shisha linza ---------- */
+
+.lg-lens {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  top: -4px;
+  width: var(--lw, 0px);
+  height: calc(100% + 8px);
+  transform: translateX(var(--lx, 0px));
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, width;
+}
+.is-ready > .lg-lens { opacity: 1; }
+.is-anim > .lg-lens {
+  transition: transform 0.62s var(--lg-ease), width 0.62s var(--lg-ease), opacity 0.25s;
+}
+
+.lg-lens-body {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  top: 0;
+  height: 100%;
+  border-radius: 20px 20px 26px 26px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.06) 38%, rgba(255, 255, 255, 0.14) 73%, rgba(255, 255, 255, 0.26));
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.72),
+    inset 0 -3px 6px rgba(140, 196, 232, 0.16),
+    0 6px 12px rgba(2, 16, 28, 0.38);
+  backdrop-filter: blur(13px) saturate(1.8);
+  -webkit-backdrop-filter: blur(13px) saturate(1.8);
+}
+.lg-lens-body::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at 50% 0, rgba(255, 255, 255, 0.45), transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 60%);
+}
+.lg-lens-body::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 34px;
+  height: 9px;
+  border-radius: 0 0 18px 18px;
+  background: linear-gradient(rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-top: 0;
+}
+
+.lg-lens-core {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  top: 50%;
+  height: 34px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.72), inset 0 -3px 5px rgba(2, 16, 28, 0.18), 0 4px 10px rgba(2, 16, 28, 0.3);
+  color: var(--lg-gold);
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow: 0 0 10px rgba(244, 189, 104, 0.4);
+  overflow: hidden;
+}
+
+.lg-nav.is-moving .lg-lens-body { animation: lgLiquid 0.62s var(--lg-ease); }
+.lg-nav.is-moving .lg-lens-core { animation: lgSquish 0.62s var(--lg-ease); }
+
+@keyframes lgLiquid {
+  0%, 100% { border-radius: 20px 20px 26px 26px; transform: scaleX(1); }
+  24% { border-radius: 15px 26px 19px 28px; transform: scaleX(1.13); }
+  52% { border-radius: 26px 15px 28px 17px; transform: scaleX(0.92); }
+  75% { transform: scaleX(1.04); }
+}
+@keyframes lgSquish {
+  0%, 100% { transform: translateY(-50%) scale(1); }
+  25% { transform: translateY(-50%) scale(1.14, 0.84); }
+  52% { transform: translateY(-50%) scale(0.92, 1.1); }
+  78% { transform: translateY(-50%) scale(1.03, 0.98); }
+}
+
+/* ---------- Profil va savat kapsulasi ---------- */
+
+.lg-tools { gap: 2px; }
+
+.lg-tool {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 15px;
+  background: transparent;
+  color: var(--lg-pill-text);
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.25s var(--lg-ease), transform 0.35s var(--lg-ease), background 0.25s;
+}
+.lg-tool:hover { color: var(--lg-pill-hot); background: transparent; }
+.lg-tool:active { transform: scale(0.95); }
+.lg-tool[hidden] { display: none; }
+
+.lg-tool svg { width: 18px; height: 18px; flex: none; }
+
+.lg-tool.user-chip { padding: 0 12px 0 6px; max-width: 160px; }
+.lg-tool.user-chip .name {
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lg-tool.user-chip .avatar {
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(145deg, #8cc4e8, #2e86c8);
+  color: #06263d;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.35);
+}
+
+.lg-tool.cart-btn { border: 0; background: transparent; }
+.lg-tool .cart-count { box-shadow: 0 0 0 2px var(--lg-pill); }
+
+/* Hover linza: matn xira bo'lmasligi uchun blur'siz */
+.lg-lens--hover { top: 0; height: 100%; transition: transform 0.5s var(--lg-ease), width 0.5s var(--lg-ease), opacity 0.25s; }
+.lg-tools:not(.is-hover) .lg-lens--hover { opacity: 0; }
+.lg-tools.is-hover .lg-lens--hover { opacity: 1; }
+.lg-lens--hover .lg-lens-body {
+  left: 0;
+  right: 0;
+  border-radius: 16px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.07) 50%, rgba(255, 255, 255, 0.16));
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 4px 10px rgba(2, 16, 28, 0.25);
+}
+.lg-lens--hover .lg-lens-body::after { display: none; }
+
+/* ---------- Burger (faqat telefon) ---------- */
+
+.lg-burger {
+  display: none;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  place-items: center;
+  position: relative;
+  cursor: pointer;
+  border: 1px solid var(--lg-glass-edge);
+  border-radius: 17px;
+  background: var(--lg-glass-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), var(--lg-glass-shadow);
+  backdrop-filter: blur(22px) saturate(1.6);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.35s var(--lg-ease);
+}
+html[data-theme="dark"] .lg-burger { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--lg-glass-shadow); }
+.lg-burger:hover { transform: translateY(-2px); }
+.lg-burger:active { transform: scale(0.94); }
+
+.lg-bars { width: 21px; height: 16px; position: relative; display: block; }
+.lg-bars i {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 4px;
+  background: var(--navy);
+  transition: top 0.35s var(--lg-ease), transform 0.35s var(--lg-ease), width 0.35s;
+}
+.lg-bars i:nth-child(1) { top: 1px; }
+.lg-bars i:nth-child(2) { top: 7px; width: 72%; }
+.lg-bars i:nth-child(3) { top: 13px; }
+.lg-burger[aria-expanded="true"] .lg-bars i:nth-child(1) { top: 7px; transform: rotate(45deg); }
+.lg-burger[aria-expanded="true"] .lg-bars i:nth-child(2) { width: 0; }
+.lg-burger[aria-expanded="true"] .lg-bars i:nth-child(3) { top: 7px; transform: rotate(-45deg); }
+
+/* ---------- Telefon menyusi: yon tomondan ochilib, pastga tushadigan shisha ---------- */
+
+.lg-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 55; /* sarlavha (60) ustida emas — burger tugma aniq qoladi */
+  background: rgba(6, 38, 61, 0.16);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.35s, visibility 0.35s, backdrop-filter 0.35s;
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+}
+.lg-scrim.open {
+  opacity: 1;
+  visibility: visible;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+html[data-theme="dark"] .lg-scrim { background: rgba(0, 6, 12, 0.5); }
+
+.lg-menu {
+  position: fixed;
+  z-index: 70;
+  top: 76px;
+  right: max(14px, 4vw);
+  width: min(340px, calc(100vw - 28px));
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 27px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(226, 238, 247, 0.5) 48%, rgba(255, 255, 255, 0.68));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 25px 70px rgba(6, 38, 61, 0.28);
+  backdrop-filter: blur(28px) saturate(1.8);
+  -webkit-backdrop-filter: blur(28px) saturate(1.8);
+  transform-origin: top right;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(24px, -22px) scale(0.88, 0.72);
+  clip-path: inset(0 0 100% 0 round 27px);
+  transition: opacity 0.22s, visibility 0.35s, transform 0.52s var(--lg-ease), clip-path 0.52s var(--lg-ease);
+}
+html[data-theme="dark"] .lg-menu {
+  border-color: rgba(170, 205, 235, 0.26);
+  background: linear-gradient(145deg, rgba(34, 62, 88, 0.82), rgba(14, 30, 44, 0.78) 48%, rgba(26, 50, 72, 0.8));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 25px 70px rgba(0, 0, 0, 0.6);
+}
+.lg-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(0, 0) scale(1);
+  clip-path: inset(0 0 0 0 round 27px);
+}
+
+.lg-menu-top {
+  padding: 16px 17px 14px;
+  border-bottom: 1px solid var(--line-strong);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.lg-menu-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--navy-soft);
+}
+.lg-menu-index {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--navy-soft);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+.lg-menu-index b { color: var(--amber); font-weight: 700; }
+
+.lg-menu-links { padding: 7px; display: grid; gap: 4px; }
+
+.lg-menu-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 13px;
+  border-radius: 16px;
+  color: var(--navy);
+  opacity: 0;
+  transform: translateY(-9px);
+  transition: background 0.25s, transform 0.35s var(--lg-ease), opacity 0.3s;
+}
+.lg-menu.open .lg-menu-link { opacity: 1; transform: translateY(0); }
+.lg-menu.open .lg-menu-link:nth-child(1) { transition-delay: 0.06s; }
+.lg-menu.open .lg-menu-link:nth-child(2) { transition-delay: 0.11s; }
+.lg-menu.open .lg-menu-link:nth-child(3) { transition-delay: 0.16s; }
+.lg-menu.open .lg-menu-link:nth-child(4) { transition-delay: 0.21s; }
+.lg-menu.open .lg-menu-link:nth-child(5) { transition-delay: 0.26s; }
+.lg-menu.open .lg-menu-link:hover { transition-delay: 0s; }
+
+.lg-menu-link:hover { background: rgba(140, 196, 232, 0.26); transform: translateX(-3px) !important; }
+html[data-theme="dark"] .lg-menu-link:hover { background: rgba(126, 195, 240, 0.14); }
+
+.lg-link-num { width: 22px; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.08em; color: var(--navy-soft); font-variant-numeric: tabular-nums; }
+.lg-link-name { flex: 1; font-family: var(--font-head); font-size: 1.08rem; font-weight: 600; letter-spacing: -0.01em; }
+.lg-link-arrow { font-size: 1.05rem; color: var(--navy-soft); transition: transform 0.25s, color 0.25s; }
+.lg-menu-link:hover .lg-link-arrow { transform: translate(3px, -3px); color: var(--sky-deep); }
+
+.lg-menu-link[aria-current="page"] {
+  background: linear-gradient(90deg, rgba(46, 134, 200, 0.16), rgba(46, 134, 200, 0.05));
+}
+.lg-menu-link[aria-current="page"] .lg-link-num { color: var(--amber); }
+.lg-menu-link[aria-current="page"] .lg-link-name { color: var(--sky-deep); }
+.lg-menu-link[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--amber);
+}
+
+.lg-menu-foot {
+  padding: 13px 17px 14px;
+  border-top: 1px solid var(--line-strong);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--navy-soft);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* ---------- Desktop o'lchamlari ---------- */
+
+@media (min-width: 961px) {
+  .site-header .wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 18px;
+  }
+  .site-header .brand { justify-self: start; }
+  .header-side { justify-self: end; }
+  .lg-menu, .lg-scrim { display: none; }
+}
+
+/* O'rtacha kenglik: sig'ishi uchun ixchamroq */
+@media (min-width: 961px) and (max-width: 1199px) {
+  .brand small { display: none; }
+  .lg-nav-item { padding: 0 13px; }
+  .lg-tool.cart-btn .label,
+  .lg-tool.user-chip .name { display: none; }
+  .lg-tool { padding: 0 12px; }
+  .lg-tool.user-chip { padding: 0 8px; }
+  .lg-tool .cart-count {
+    position: absolute;
+    top: 3px;
+    right: 1px;
+    min-width: 18px;
+    height: 18px;
+    font-size: 0.66rem;
+  }
+}
+
+/* ---------- Telefon / planshet ---------- */
+
+@media (max-width: 960px) {
+  .lg-nav { display: none; }
+  .lg-burger { display: grid; }
+
+  .site-header .wrap { padding: 10px 0; }
+
+  .lg-tools {
+    height: auto;
+    padding: 0;
+    gap: 8px;
+    background: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .lg-tools::before,
+  .lg-lens--hover { display: none; }
+
+  .lg-tool {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 17px;
+    color: var(--navy);
+    border: 1px solid var(--lg-glass-edge);
+    background: var(--lg-glass-bg);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), var(--lg-glass-shadow);
+    backdrop-filter: blur(22px) saturate(1.6);
+    -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  }
+  html[data-theme="dark"] .lg-tool { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--lg-glass-shadow); }
+  .lg-tool:hover { color: var(--navy); transform: translateY(-2px); }
+  .lg-tool.cart-btn { border: 1px solid var(--lg-glass-edge); background: var(--lg-glass-bg); }
+  .lg-tool.cart-btn .label,
+  .lg-tool.user-chip .name { display: none; }
+  .lg-tool svg { width: 20px; height: 20px; }
+
+  .lg-tool.user-chip { max-width: none; padding: 0; }
+  .lg-tool.user-chip .avatar { width: 32px; height: 32px; box-shadow: none; }
+
+  .lg-tool .cart-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 20px;
+    height: 20px;
+    font-size: 0.68rem;
+    box-shadow: 0 0 0 2px var(--white);
+  }
+}
+
+@media (max-width: 400px) {
+  .lg-burger, .lg-tool { width: 42px; height: 42px; border-radius: 15px; }
+  .lg-tool.user-chip .avatar { width: 28px; height: 28px; }
+  .lg-tools { gap: 6px; }
+  .header-side { gap: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-menu, .lg-menu-link, .lg-scrim { transition-duration: 0.01ms !important; transition-delay: 0s !important; }
+  .lg-nav.is-moving .lg-lens-body,
+  .lg-nav.is-moving .lg-lens-core { animation: none; }
+}

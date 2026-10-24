@@ -197,7 +197,6 @@ html[data-theme="dark"] .hero .btn:hover { box-shadow: 0 12px 28px rgba(0, 0, 0,
 html[data-theme="dark"] .site-header {
   background: rgba(10, 22, 32, 0.9);
 }
-html[data-theme="dark"] .mobile-nav-overlay { background: rgba(0, 6, 12, 0.6); }
 html[data-theme="dark"] .drawer-overlay,
 html[data-theme="dark"] .modal-overlay,
 html[data-theme="dark"] .lg-overlay,

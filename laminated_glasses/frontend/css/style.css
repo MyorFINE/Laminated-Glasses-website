@@ -337,29 +337,6 @@ button {
   padding: 14px 0;
 }
 
-.main-nav {
-  display: flex;
-  gap: 26px;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.main-nav a {
-  color: var(--navy-soft);
-  padding: 4px 0;
-  border-bottom: 2px solid transparent;
-  transition: color 0.16s var(--ease), border-color 0.16s var(--ease);
-}
-
-.main-nav a:hover {
-  color: var(--navy);
-  border-color: var(--sky);
-}
-
-.main-nav a.active {
-  color: var(--navy);
-  border-color: var(--amber);
-}
 
 .header-side {
   display: flex;
@@ -367,116 +344,6 @@ button {
   gap: 12px;
 }
 
-/* Mobil menyu tugmasi — faqat main-nav yashiriladigan enlarda ko'rinadi */
-.menu-toggle {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 5px;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--white);
-  cursor: pointer;
-  order: -1;
-}
-
-.menu-toggle span {
-  display: block;
-  width: 17px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--navy);
-  transition: transform 0.22s var(--ease), opacity 0.22s var(--ease);
-}
-
-.menu-toggle[aria-expanded="true"] span:nth-child(1) {
-  transform: translateY(7px) rotate(45deg);
-}
-.menu-toggle[aria-expanded="true"] span:nth-child(2) {
-  opacity: 0;
-}
-.menu-toggle[aria-expanded="true"] span:nth-child(3) {
-  transform: translateY(-7px) rotate(-45deg);
-}
-
-/* Mobil ochiladigan menyu — sarlavha ostidan tushib keladi */
-.mobile-nav-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(6, 38, 61, 0.42);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.24s var(--ease);
-  z-index: 65;
-}
-
-.mobile-nav-overlay.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.mobile-nav {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100%;
-  width: min(300px, 82vw);
-  background: var(--white);
-  box-shadow: var(--shadow-lift);
-  z-index: 70;
-  display: flex;
-  flex-direction: column;
-  padding: 18px 8px;
-  transform: translateX(100%);
-  transition: transform 0.28s var(--ease);
-}
-
-.mobile-nav.open {
-  transform: translateX(0);
-}
-
-.mobile-nav-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 14px 16px;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 10px;
-}
-
-.mobile-nav-head span {
-  font-family: var(--font-head);
-  font-weight: 600;
-  color: var(--navy);
-}
-
-.mobile-nav a {
-  display: block;
-  padding: 15px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--navy-soft);
-  transition: background 0.16s var(--ease), color 0.16s var(--ease);
-}
-
-.mobile-nav a:hover,
-.mobile-nav a.active {
-  background: var(--ice);
-  color: var(--sky-deep);
-}
-
-@media (min-width: 901px) {
-  .menu-toggle,
-  .mobile-nav-overlay,
-  .mobile-nav {
-    display: none !important;
-  }
-}
 
 /* Scroll bilan ochiladigan yengil animatsiya — foydalanuvchi pastga
    tushganda kartalar ravon paydo bo'ladi. */
@@ -1698,12 +1565,6 @@ button {
     margin: 0 auto;
     width: 100%;
   }
-  .main-nav {
-    display: none;
-  }
-  .menu-toggle {
-    display: flex;
-  }
 }
 
 @media (max-width: 560px) {
@@ -2812,18 +2673,6 @@ p.cm-empty-text:only-child { padding: 40px 0; text-align: center; }
   transition: transform 0.26s var(--ease), box-shadow 0.26s var(--ease), visibility 0s;
 }
 
-/* Mobil menyu paneli ham yopiq paytda soyasi bilan ekran chetini xiralashtirardi. */
-.mobile-nav {
-  visibility: hidden;
-  box-shadow: none;
-  transition: transform 0.28s var(--ease), box-shadow 0.28s var(--ease), visibility 0s linear 0.28s;
-}
-.mobile-nav.open {
-  visibility: visible;
-  box-shadow: var(--shadow-lift);
-  transition: transform 0.28s var(--ease), box-shadow 0.28s var(--ease), visibility 0s;
-}
-
 /* Bezak elementlar (orbitalar, yaltirash) tufayli sahifa yon tomonga siljimasin. */
 body { overflow-x: clip; }
 
@@ -2840,7 +2689,6 @@ body { overflow-x: clip; }
   .header-side { gap: 6px; }
   .cart-btn { padding: 9px 12px; gap: 6px; }
   .user-chip { padding: 5px; }
-  .menu-toggle { width: 40px; height: 40px; }
 }
 
 /* ---------- Yangiliklar: rasm, like va izoh tugmalari ---------- */
